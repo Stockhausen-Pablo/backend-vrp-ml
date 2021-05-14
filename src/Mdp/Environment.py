@@ -13,3 +13,4 @@ class Environment:
         self.capacityDemand = capacityDemand
         self.vehicles = vehicles
         self.vehicleCapacities = vehicleCapacity
+
