@@ -14,3 +14,7 @@ class Environment:
         self.vehicles = vehicles
         self.vehicleCapacities = vehicleCapacity
 
+        #def step(self, action):
+        #def reset(self):
+        #def render(self, mode='human'):
+        #def close(self):
