@@ -1,6 +1,6 @@
 
 
-class Environment:
+class VRPEnvironment:
 
     def __init__(self, states, actions, probabilityMatrix, rewardFunction, microHub, discountFactor, capacityDemand,
                  vehicles, vehicleCapacity):
@@ -14,7 +14,7 @@ class Environment:
         self.vehicles = vehicles
         self.vehicleCapacities = vehicleCapacity
 
-        #def step(self, action):
-        #def reset(self):
-        #def render(self, mode='human'):
-        #def close(self):
+        #current
+        #self.current_state = [microHub if current_state === null else current_state]
+
+

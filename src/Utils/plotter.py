@@ -14,7 +14,7 @@ def pltcolor(stopid):
 
 
 def plotCoordinates():
-    stopid, x, y, _ = zip(*[stop.getStop() for stop in tManager.stops])
+    stopid, x, y, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
 
     cols = pltcolor(stopid)
 
