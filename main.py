@@ -1,7 +1,7 @@
 import csv
 import numpy as np
 
-from tf_agents.specs import array_spec
+#from tf_agents.specs import array_spec
 
 from argsConfig import getParams
 from train import train_model
@@ -20,17 +20,18 @@ def loadStopData(dataSet):
         next(csv_reader, None)
         for row in csv_reader:
             tManager.addStop(
-                Stop(int(row[0]), float(row[2]), float(row[1]), int(row[3]), bool(row[4].lower() in ['true'])))
+                Stop(float(row[0]), int(row[1]), float(row[3]), float(row[2]), int(row[4]), int(row[5])))
     tManager.calculateDistances()
 
 
 def main(args):
     # Input
-    print("Please enter the datafile name")
-    dataSet = input("Enter name of stops file on Desktop:")
-    # amountVehicles = input("How many vehicles:")
-    # capacityWeight = input("What is the capacityWeight:")
-    # capacityVolume = input("What is the capacityVolume:")
+    print("---------System menu---------")
+    print("Below please specify the configuration options of the program")
+    dataSet = input("Please specify the data source of the stops to be processed:")
+    amountVehicles = int(input("How many vehicles will be used:"))
+    capacityWeight = float(input("What is the maximum weight that the vehicle can carry:"))
+    capacityVolume = float(input("What is the maximum volume that the vehicle can hold:"))
 
     # -----
     tManager.clear()
@@ -41,21 +42,28 @@ def main(args):
     # Plot Coordinates of input stops
     plotCoordinates()
 
+    if args['convert']:
+        print("-Starting convert-")
+
     if args['train']:
-        antColony = AntManager(
+        print("-Entered Training Mode-")
+        print("-Starting up Ant Colony Optimization to get Probability Matrix-")
+        antManager = AntManager(
             stops=tManager.getListOfStops(),
             start_stop=tManager.getStop(0),
-            vehicleCount=1,
+            vehicleWeight=capacityWeight,
+            vehicleVolume=capacityVolume,
+            vehicleCount=amountVehicles,
             discountAlpha=1.1,
             discountBeta=1.1,
             pheromone_evaporation_coefficient=.70,
-            pheromone_constant=30000,
+            pheromone_constant=1,
             iterations=10
         )
-        result = antColony.mainloop()
+        result = antManager.runACO()
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
-            actions=array_spec.BoundedArraySpec(shape=(), dtype=np.int32, minimum=0, maximum=1, name='action'),
+            actions=[0,1],
             probabilityMatrix=np.zeros((tManager.getLength(), tManager.getLength())),
             rewardFunction=0,
             microHub=tManager.getStop(0),

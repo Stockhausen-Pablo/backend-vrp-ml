@@ -8,6 +8,9 @@ def getParams():
 
     # Add arguments
     # ------------------
+    # Convert
+    argsParser.add_argument('--convert', default=False, action='store_true', help='entering convert mode')
+
     # Training
     argsParser.add_argument('--train', default=True, action='store_true', help='entering training mode')
 

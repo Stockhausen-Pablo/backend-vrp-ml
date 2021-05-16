@@ -7,6 +7,8 @@ class AntManager:
                  stops,
                  start_stop,
                  vehicleCount,
+                 vehicleWeight,
+                 vehicleVolume,
                  discountAlpha,
                  discountBeta,
                  pheromone_evaporation_coefficient,
@@ -35,6 +37,8 @@ class AntManager:
 
         # Initializing the List of Ants
         self.antCount = vehicleCount
+        self.antWeight = vehicleWeight
+        self.antVolume = vehicleVolume
         self.ants = self.setAnts(self.start_stop)
 
         # For Solution
@@ -42,12 +46,13 @@ class AntManager:
         self.shortest_path = None
 
     def setAnts(self, startStop):
+        print("-Setting up Ants-")
         if self.firstInit:
-            return [Ant(startStop, startStop, self.nodes, self.pheromoneMatrix,
+            return [Ant(startStop, startStop, self.antWeight, self.antVolume, self.nodes, self.pheromoneMatrix,
                         self.discountAlpha, self.discountBeta, firstInit=True) for _ in range(self.antCount)]
 
         for ant in self.ants:
-            ant.__init__(startStop, startStop, self.nodes, self.pheromoneMatrix, self.discountAlpha, self.discountBeta)
+            ant.__init__(startStop, startStop,self.antWeight, self.antVolume, self.nodes, self.pheromoneMatrix, self.discountAlpha, self.discountBeta, firstInit=False)
 
     def updatePheromoneMatrix(self):
         for start in range(len(self.pheromoneMatrix)):
@@ -60,7 +65,8 @@ class AntManager:
         for index, stop in enumerate(tour):
             stop_b = 0
             if index == len(tour) - 1:
-                stop_b = tour[0]
+                break
+                #stop_b = tour[0]
             else:
                 stop_b = tour[index + 1]
 
@@ -68,7 +74,8 @@ class AntManager:
             self.updated_pheromoneMatrix[stop.stopid][stop_b.stopid] += new_pheromoneValue
             self.updated_pheromoneMatrix[stop_b.stopid][stop.stopid] += new_pheromoneValue
 
-    def mainloop(self):
+    def runACO(self):
+        print("-Running Colony Optimization-")
         for iteration in range(self.iterations):
             for ant in self.ants:
                 ant.moveAnt()
@@ -84,11 +91,15 @@ class AntManager:
                     self.shortest_path = ant.getTour()
 
             self.updatePheromoneMatrix()
+
+            if self.firstInit:
+                self.firstInit = False
+
             self.setAnts(self.start_stop)
             self.updated_pheromoneMatrix = [[0.0] * self.tour_size for _ in range(self.tour_size)]
-            if (iteration + 1) % 50 == 0:
-                print('{0}/{1} Searching...'.format(iteration + 1, self.iterations))
-
+            #if (iteration + 1) % 50 == 0:
+            #    print('{0}/{1} Searching...'.format(iteration + 1, self.iterations))
+            print('{0}/{1} Searching...'.format(iteration + 1, self.iterations))
             # if _ % 10 == 0:
             #     print(f"Iteration: {_} Best Fitness: {self.shortest_distance}")
 

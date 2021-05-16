@@ -5,21 +5,27 @@ from src.Utils.helper import linalg_norm_T
 
 
 class Ant:
-    def __init__(self, start_stop, current_stop, possibleStops, pheromoneMatrix, discountAlpha, discountBeta, firstInit=False):
+    def __init__(self, start_stop, current_stop, antWeight, antVolume, possibleStops, pheromoneMatrix, discountAlpha,
+                 discountBeta, firstInit=False):
         self.start_stop = start_stop
         self.possibleStops = possibleStops
         self.current_stop = current_stop
+        self.antWeight = antWeight
+        self.antVolume = antVolume
         self.tour = []
+        self.tourWeight = 0.0
         self.tour_complete = False
         self.distance_travelled = 0.0
         self.discountAlpha = discountAlpha
         self.discountBeta = discountBeta
         self.pheromoneMatrix = pheromoneMatrix
-        self.tour.append(self.start_stop)
+        #self.tour.append(self.start_stop)
         self.firstInit = firstInit
-        self.possibleStops.remove(self.current_stop)
+        self.updateTour(start_stop)
+        # self.possibleStops.remove(self.current_stop)
 
     def moveAnt(self):
+        print("-Ants started to move-")
         # Until Possible Locations is not Empty
         while self.possibleStops:
             next_stop = self.selectStop()
@@ -34,14 +40,16 @@ class Ant:
             rnd = random.choice(self.possibleStops)
             while rnd == self.current_stop and len(self.possibleStops) > 1:
                 rnd = random.choice(self.possibleStops)
+                # self.firstInit = !firstInit
             return rnd
 
         stopAttraction = dict()
         total_attraction = 0.0
 
         for possible_next_stop in self.possibleStops:
-            pheremoneValue = self.pheromoneMatrix[self.current_stop][possible_next_stop]
-            distance = tManager.getDistance(self.current_stop, possible_next_stop)
+            pheremoneValue = self.pheromoneMatrix[self.current_stop.stopid][possible_next_stop.stopid]
+            self.pheromoneMatrix[self.current_stop.stopid][self.current_stop.stopid] = 0.0
+            distance = tManager.getDistance(self.current_stop.stopid, possible_next_stop.stopid)
             stopAttraction[possible_next_stop] = pow(pheremoneValue, self.discountAlpha) * pow((1 / distance),
                                                                                                self.discountBeta)
             total_attraction += stopAttraction[possible_next_stop]
@@ -51,7 +59,7 @@ class Ant:
 
         return choices(
             population=self.possibleStops,
-            weights=[attraction / total_attraction for attraction in stopAttraction]
+            weights=[attraction / total_attraction for attraction in stopAttraction.values()]
         )[0]
 
     def traverseAnt(self, startStop, endStop):
@@ -61,6 +69,7 @@ class Ant:
 
     def updateTour(self, newStopToAdd):
         self.tour.append(newStopToAdd)
+        self.tourWeight += newStopToAdd.demandWeight
         self.possibleStops = list(self.possibleStops)
         self.possibleStops.remove(newStopToAdd)
 
