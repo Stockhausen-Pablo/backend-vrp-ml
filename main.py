@@ -1,8 +1,6 @@
 import csv
 import numpy as np
 
-#from tf_agents.specs import array_spec
-
 from argsConfig import getParams
 from train import train_model
 
@@ -58,7 +56,7 @@ def main(args):
             discountBeta=1.1,
             pheromone_evaporation_coefficient=.70,
             pheromone_constant=1,
-            iterations=10
+            iterations=500
         )
         result = antManager.runACO()
         environment = VRPEnvironment(
