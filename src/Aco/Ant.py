@@ -1,7 +1,5 @@
-import math
-import struct
-
 import src.Tour.TourManager as tManager
+
 from src.Utils.helper import linalg_norm_T
 
 
@@ -13,7 +11,6 @@ class Ant:
                  antVolume,
                  possibleStops,
                  df_pheromoneMatrix,
-                 # pheromoneMatrix,
                  discountAlpha,
                  discountBeta,
                  pheromone_evaporation_coefficient,
@@ -59,7 +56,7 @@ class Ant:
                         possible_final_tourWeight = stop.demandWeight + self.tourWeight
                         possible_final_tourVolume = stop.demandVolume + self.tourVolume
                         if ((possible_final_tourVolume <= self.antVolume) and (
-                            possible_final_tourWeight <= self.antWeight)):
+                                possible_final_tourWeight <= self.antWeight)):
                             self.traverseAnt(self.current_stop, next_stop)
                             self.possibleStops = self.rmdPossibleStops
                             self.possibleStops.remove(stop)
@@ -83,66 +80,65 @@ class Ant:
     def selectStop(self):
         if self.firstInit:
             import random
-            rnd = random.choice(self.possibleStops)
-            while rnd == self.current_stop and len(self.possibleStops) > 1:
-                rnd = random.choice(self.possibleStops)
-                # self.firstInit = !firstInit
-            return rnd
+            return random.choice(self.possibleStops)
+            # while rnd == self.current_stop and len(self.possibleStops) > 1:
+            #    rnd = random.choice(self.possibleStops)
+            #    # self.firstInit = !firstInit
+            # return rnd
 
         stopAttraction = dict()
         total_attraction = 0.0
 
         for possible_next_stop in self.possibleStops:
-            df_pheromoneValue = self.df_pheromoneMatrix.at[
-                self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier]
+            df_pheromoneValue = float(
+                self.df_pheromoneMatrix.at[self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier])
             # pheromoneValue = self.pheromoneMatrix[self.current_stop.stopid][possible_next_stop.stopid]
             # self.pheromoneMatrix[self.current_stop.stopid][self.current_stop.stopid] = 0.0
-            distance = tManager.getDistance(self.current_stop.stopid, possible_next_stop.stopid)
+            distance = float(tManager.getDistance(self.current_stop.stopid, possible_next_stop.stopid))
             stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow((1 / distance),
                                                                                                   self.discountBeta)
             total_attraction += stopAttraction[possible_next_stop]
 
-        if total_attraction == 0:
+        if total_attraction == 0.0:
             for key, value in stopAttraction.items():
-                if math.isnan(value) or (math.isinf(value) and value > 0):
-                    stopAttraction[key] = value
-                if value == 0.0:
-                    stopAttraction[key] = 0.0
-                n = struct.unpack('<q', struct.pack('<d', value))[0]
-                if n >= 0:
-                    n += 1
-                else:
-                    n -= 1
-                stopAttraction[key] = struct.unpack('<d', struct.pack('<q', n))[0]
-        import random
-        rndFactor = random.random()
+                stopAttraction[key] = self.next_up(value)
+            total_attraction = self.next_up(total_attraction)
 
-        cummulative = 0
-        for possible_next_location in stopAttraction:
-            weight = (stopAttraction[possible_next_location] / total_attraction)
-            if rndFactor <= weight + cummulative:
-                return possible_next_location
-            cummulative += weight
+        return self.evaluateWeightChoices(stopAttraction, total_attraction)
+
+    def next_up(self, x):
+        import math
+        import struct
+        if math.isnan(x) or (math.isinf(x) and x > 0):
+            return x
+        if x == 0.0:
+            x = 0.0
+        n = struct.unpack('<q', struct.pack('<d', x))[0]
+        if n >= 0:
+            n += 1
+        else:
+            n -= 1
+        return struct.unpack('<d', struct.pack('<q', n))[0]
+
+    def evaluateWeightChoices(self, choices, total):
+        import random
+        from bisect import bisect
+        r = random.uniform(0, total)
+        upto = 0
+        for key, value in choices.items():
+            if upto + value >= r:
+                return key
+            upto += value
+        assert False
 
     def traverseAnt(self, startStop, endStop):
         self.updateTour(endStop)
         self.updateDistanceTravelled(startStop, endStop)
         self.current_stop = endStop
 
-    def handleLastStopTour(self, lastStop):
-        self.tour.append(self.start_stop)
-        self.allTours.append(self.tour)
-        self.updateDistanceTravelled(self.current_stop, self.start_stop)
-        self.resetTour()
-        self.tour.append(self.start_stop)
-        self.current_stop = self.start_stop
-        self.tour.append(lastStop)
-        self.updateDistanceTravelled(self.current_stop, lastStop)
-        self.current_stop = lastStop
-
     def startNewTour(self, microHub, temp_stops):
         self.tour.append(microHub)
-        self.allTours.append(self.tour)
+        self.allTours.append(self.tour.copy())
         self.updateDistanceTravelled(self.current_stop, microHub)
         self.current_stop = microHub
         self.resetTour()

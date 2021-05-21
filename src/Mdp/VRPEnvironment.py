@@ -1,20 +1,116 @@
-
-
 class VRPEnvironment:
 
-    def __init__(self, states, actions, probabilityMatrix, rewardFunction, microHub, discountFactor, capacityDemand,
-                 vehicles, vehicleCapacity):
+    def __init__(self, states, actions, probabilityMatrix, distanceMatrix, rewardFunction, microHub, capacityDemands,
+                 vehicles, vehicleWeight, vehicleVolume):
         self.states = states
         self.actions = actions
         self.probabilityMatrix = probabilityMatrix
+        self.distanceMatrix = distanceMatrix
         self.rewardFunction = rewardFunction
         self.microHub = microHub
-        self.discountFactor = discountFactor
-        self.capacityDemand = capacityDemand
+
+        # demands
         self.vehicles = vehicles
-        self.vehicleCapacities = vehicleCapacity
+        self.capacityDemands = capacityDemands
+        self.vehicleWeight = vehicleWeight
+        self.vehicleVolume = vehicleVolume
 
-        #current
-        #self.current_state = [microHub if current_state === null else current_state]
+        # current
+        self.current_state = None
+        self.current_state = [self.microHub if self.current_state is None else self.current_state]
+        self.possibleStops = []
+        self.done = False
 
+        # current Tours
+        self.allTours = []
+        self.current_tour = []
+        self.current_tour.append(self.current_state)
+        self.current_tour_weight = 0.0
+        self.current_tour_volume = 0.0
 
+        # init
+        self.resetPossibleStops()
+
+    def reset(self):
+        self.done = False
+        self.resetPossibleStops()
+        self.resetTours()
+        return self.current_state
+
+    def step(self, action, actionNr):
+        reward = 0.0
+        if action == 0:
+            print("--evaluating action 2: selecting microhub as last Stop of tour")
+            if not self.possibleStops:
+                self.done = True
+            reward = self.reward_func(self.current_state, self.microHub)
+            self.current_tour.append(self.microHub)
+            self.allTours.append(self.current_tour)
+            self.current_state = self.microHub
+            self.resetTour()
+            return self.microHub, reward, self.done, self.current_tour, self.allTours
+        else:
+            print("--evaluating action 1: selecting next possible node")
+            relevantStop = next((x for x in self.possibleStops if x.hashIdentifier == actionNr), None)
+            reward = self.reward_func(self.current_state, relevantStop)
+            if not self.possibleStops:
+                self.allTours.append(self.current_tour)
+                self.done = True
+            self.possibleStops.remove(relevantStop)
+            self.current_tour.append(relevantStop)
+            self.current_tour_weight += relevantStop.demandWeight
+            self.current_tour_volume += relevantStop.demandVolume
+            return relevantStop, reward, self.done, self.current_tour, self.allTours
+            # next_state, reward, done, _
+
+    def predict(self, state_i, legalActions):
+        listPredictions = []
+        for state_j in self.probabilityMatrix:
+            if state_j in legalActions:
+                prediction = self.probabilityMatrix.at[state_i.hashIdentifier, state_j]
+                listPredictions.append(prediction)
+        return listPredictions
+
+    def resetPossibleStops(self):
+        copyStates = self.states.copy()
+        copyStates.remove(self.microHub)
+        self.current_state = self.microHub
+        self.possibleStops = copyStates
+
+    def resetTours(self):
+        self.allTours = []
+        self.current_tour = []
+        self.current_tour.append(self.current_state)
+        self.current_tour_weight = 0.0
+        self.current_tour_volume = 0.0
+
+    def resetTour(self):
+        self.current_tour = []
+        self.current_tour.append(self.current_state)
+        self.current_tour_weight = 0.0
+        self.current_tour_volume = 0.0
+
+    def reward_func(self, current_stop, next_stop):
+        reward = self.distanceMatrix.at[current_stop.hashIdentifier, next_stop.hashIdentifier]
+        return reward
+
+    def getTransitionProbability(self, stop_i_hash, stop_j_hash):
+        return self.probabilityMatrix.at[stop_i_hash, stop_j_hash]
+
+    def getCapacityDemandOfStop(self, stop_hash):
+        return list(self.capacityDemands[stop_hash].values())
+
+    def getMicrohubId(self):
+        return self.microHub.hashIdentifier
+
+    def getLegalActions(self):
+        legalActions = []
+        for stop in self.possibleStops:
+            possible_tour_weight = float(stop.demandWeight) + self.current_tour_weight
+            possible_tour_volume = float(stop.demandVolume) + self.current_tour_volume
+            if (possible_tour_weight <= self.vehicleWeight and possible_tour_volume <= self.vehicleVolume):
+                legalActions.append(stop.hashIdentifier)
+
+        if not legalActions:
+            legalActions.append(self.microHub.hashIdentifier)
+        return legalActions

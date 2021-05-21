@@ -1,5 +1,4 @@
 import csv
-import numpy as np
 
 from argsConfig import getParams
 from train import train_model
@@ -8,8 +7,13 @@ import src.Tour.TourManager as tManager
 
 from src.Tour.Stop import Stop
 from src.Utils.plotter import plotCoordinates
+from src.Utils.helper import normalize_df
+from src.Utils import plotting
 from src.Mdp.VRPEnvironment import VRPEnvironment
+from src.Mdp.MDPModel import MDPModel
+from src.RL.Policy.policy import value_iteration
 from src.Aco.AntManager import AntManager
+
 
 
 def loadStopData(dataSet):
@@ -20,6 +24,8 @@ def loadStopData(dataSet):
             tManager.addStop(
                 Stop(float(row[0]), int(row[1]), float(row[3]), float(row[2]), int(row[4]), int(row[5])))
     tManager.calculateDistances()
+    tManager.calculateDistanceMatrix()
+    tManager.initCapacityDemands()
 
 
 def main(args):
@@ -37,14 +43,17 @@ def main(args):
     # Load Stop Data
     loadStopData(dataSet)
 
+    # Setup Distance Matrix for later use
+    distanceMatrix = tManager.getDistances()
+
     # Plot Coordinates of input stops
     plotCoordinates()
 
-    if args['convert']:
-        print("-Starting convert-")
-
     if args['train']:
         print("-Entered Training Mode-")
+
+        # ------------------
+        # Setting up and Running ACO
         print("-Starting up Ant Colony Optimization to get Probability Matrix-")
         antManager = AntManager(
             stops=tManager.getListOfStops(),
@@ -52,28 +61,47 @@ def main(args):
             vehicleWeight=capacityWeight,
             vehicleVolume=capacityVolume,
             vehicleCount=amountVehicles,
-            discountAlpha=1.1,
-            discountBeta=1.1,
-            pheromone_evaporation_coefficient=.70,
-            pheromone_constant=1,
-            iterations=500
+            discountAlpha=.5,
+            discountBeta=1.2,
+            pheromone_evaporation_coefficient=.40,
+            pheromone_constant=1.0,
+            iterations=80
         )
-        result = antManager.runACO()
+        # ------------------
+        # Retrieving solution from ACO and preparing further transformation
+
+        resultACO = antManager.runACO()
+        ant_shortest_distance = resultACO[0]
+        ant_shortest_path = resultACO[1]
+        ant_df_pheromoneMatrix = resultACO[2]
+        ant_probability_Matrix = resultACO[3]
+
+        # Normalize
+        normalized_probability_Matrix = normalize_df(ant_probability_Matrix)
+
+        # ------------------
+        # Setting up MDP-Environment
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
-            actions=[0,1],
-            probabilityMatrix=np.zeros((tManager.getLength(), tManager.getLength())),
+            actions=[[0, 1], [1], [0]],
+            probabilityMatrix=normalized_probability_Matrix,
+            distanceMatrix=distanceMatrix,
             rewardFunction=0,
-            microHub=tManager.getStop(0),
-            discountFactor=0.2,
-            capacityDemand=0,
+            microHub=tManager.getMicrohub(),
+            capacityDemands=tManager.getCapacityDemands(),
             vehicles=0,
-            vehicleCapacity=0)
+            vehicleWeight=capacityWeight,
+            vehicleVolume=capacityVolume
+        )
 
-        train_model(0,
-                    start_epoch=0,
-                    end_epoch=5,
+        statistics = train_model(environment,
+                    num_episodes=5,
+                    discountFactor=0.2,
                     )
+        plotting.plot_episode_stats(statistics, smoothing_window=25)
+
+        if args['test']:
+            print("Testig")
 
 
 if __name__ == "__main__":

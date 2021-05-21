@@ -1,0 +1,5 @@
+pandas~=1.2.4
+numpy~=1.19.5
+matplotlib~=3.4.2
+setuptools~=49.2.1
+gym~=0.18.0
