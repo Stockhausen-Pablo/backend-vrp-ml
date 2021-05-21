@@ -38,9 +38,10 @@ class VRPEnvironment:
         return self.current_state
 
     def step(self, action, actionNr):
-        reward = 0.0
+        # Check which action got selected : 0 = back to Depot ; 1 = select unvisited Node
         if action == 0:
-            print("--evaluating action 2: selecting microhub as last Stop of tour")
+            print("--Action 0 was selected")
+            print("--The last stop of the tour will be the Microhub and the tour is completed.")
             if not self.possibleStops:
                 self.done = True
             reward = self.reward_func(self.current_state, self.microHub)
@@ -50,7 +51,8 @@ class VRPEnvironment:
             self.resetTour()
             return self.microHub, reward, self.done, self.current_tour, self.allTours
         else:
-            print("--evaluating action 1: selecting next possible node")
+            print("--Action 1 was selected")
+            print("--The next available node will be selected.")
             relevantStop = next((x for x in self.possibleStops if x.hashIdentifier == actionNr), None)
             reward = self.reward_func(self.current_state, relevantStop)
             if not self.possibleStops:
@@ -61,7 +63,6 @@ class VRPEnvironment:
             self.current_tour_weight += relevantStop.demandWeight
             self.current_tour_volume += relevantStop.demandVolume
             return relevantStop, reward, self.done, self.current_tour, self.allTours
-            # next_state, reward, done, _
 
     def predict(self, state_i, legalActions):
         listPredictions = []

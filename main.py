@@ -1,7 +1,5 @@
 import csv
-
 from argsConfig import getParams
-from train import train_model
 
 import src.Tour.TourManager as tManager
 
@@ -10,8 +8,7 @@ from src.Utils.plotter import plotCoordinates
 from src.Utils.helper import normalize_df
 from src.Utils import plotting
 from src.Mdp.VRPEnvironment import VRPEnvironment
-from src.Mdp.MDPModel import MDPModel
-from src.RL.Policy.policy import value_iteration
+from src.RL.VRPAgent import VRPAgent
 from src.Aco.AntManager import AntManager
 
 
@@ -94,11 +91,12 @@ def main(args):
             vehicleVolume=capacityVolume
         )
 
-        statistics = train_model(environment,
-                    num_episodes=5,
-                    discountFactor=0.2,
-                    )
-        plotting.plot_episode_stats(statistics, smoothing_window=25)
+        agent = VRPAgent(env= environment,
+                         num_episodes=5)
+
+        episodeStatistics = agent.train_model(gamma=0.5, epsilon=0.5, discountFactor=0.2)
+
+        plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
 
         if args['test']:
             print("Testig")

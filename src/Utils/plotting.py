@@ -72,21 +72,22 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     plt.ylabel("Episode Length")
     plt.title("Episode Length over Time")
     if noshow:
-        plt.close(fig1)
+        fig1.close()
     else:
-        plt.show(fig1)
+        fig1.show()
 
     # Plot the episode reward over time
     fig2 = plt.figure(figsize=(10, 5))
-    rewards_smoothed = pd.Series(stats.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).mean()
-    plt.plot(rewards_smoothed)
+    #test = pd.Series(data=stats.episode_rewards).rolling(smoothing_window).sum()
+    #rewards_smoothed = pd.Series(data=stats.episode_rewards).rolling(smoothing_window, min_periods=smoothing_window).sum()
+    plt.plot(stats.episode_rewards)
     plt.xlabel("Episode")
     plt.ylabel("Episode Reward (Smoothed)")
     plt.title("Episode Reward over Time (Smoothed over window size {})".format(smoothing_window))
     if noshow:
-        plt.close(fig2)
+        fig2.close()
     else:
-        plt.show(fig2)
+        fig2.show()
 
     # Plot time steps and episode number
     fig3 = plt.figure(figsize=(10, 5))
@@ -95,8 +96,8 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     plt.ylabel("Episode")
     plt.title("Episode per time step")
     if noshow:
-        plt.close(fig3)
+        fig3.close()
     else:
-        plt.show(fig3)
+        fig3.show()
 
     return fig1, fig2, fig3
