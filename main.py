@@ -10,6 +10,7 @@ from src.Utils import plotting
 from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.VRPAgent import VRPAgent
 from src.Aco.AntManager import AntManager
+from src.RL.Policy.PolicyManager import PolicyManager
 
 
 
@@ -86,12 +87,15 @@ def main(args):
             rewardFunction=0,
             microHub=tManager.getMicrohub(),
             capacityDemands=tManager.getCapacityDemands(),
-            vehicles=0,
+            vehicles=amountVehicles,
             vehicleWeight=capacityWeight,
             vehicleVolume=capacityVolume
         )
 
+        policyManager = PolicyManager()
+
         agent = VRPAgent(env= environment,
+                         policyManager=policyManager,
                          num_episodes=5)
 
         episodeStatistics = agent.train_model(gamma=0.5, epsilon=0.5, discountFactor=0.2)

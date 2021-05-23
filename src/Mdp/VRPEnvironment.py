@@ -95,6 +95,9 @@ class VRPEnvironment:
         reward = self.distanceMatrix.at[current_stop.hashIdentifier, next_stop.hashIdentifier]
         return reward
 
+    def reward_func_hash(self, current_stop, next_stop):
+        return self.distanceMatrix.at[current_stop, next_stop]
+
     def getTransitionProbability(self, stop_i_hash, stop_j_hash):
         return self.probabilityMatrix.at[stop_i_hash, stop_j_hash]
 
@@ -103,6 +106,12 @@ class VRPEnvironment:
 
     def getMicrohubId(self):
         return self.microHub.hashIdentifier
+
+    def getStateByHash(self, hashIdentifier):
+        return next((state for state in self.states if state.hashIdentifier == hashIdentifier), None)
+
+    def getStateHashes(self):
+        return [state.hashIdentifier for state in self.states]
 
     def getLegalActions(self):
         legalActions = []
