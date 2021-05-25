@@ -59,7 +59,7 @@ class Ant:
                                 possible_final_tourWeight <= self.antWeight)):
                             self.traverseAnt(self.current_stop, next_stop)
                             self.possibleStops = self.rmdPossibleStops
-                            self.possibleStops.remove(stop)
+                            #self.possibleStops.remove(stop)
                             continue
                         else:
                             overloadedStops.append(stop)
@@ -90,12 +90,11 @@ class Ant:
         total_attraction = 0.0
 
         for possible_next_stop in self.possibleStops:
-            df_pheromoneValue = float(
-                self.df_pheromoneMatrix.at[self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier])
+            df_pheromoneValue = self.df_pheromoneMatrix.at[self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier].astype(float)
             # pheromoneValue = self.pheromoneMatrix[self.current_stop.stopid][possible_next_stop.stopid]
             # self.pheromoneMatrix[self.current_stop.stopid][self.current_stop.stopid] = 0.0
-            distance = float(tManager.getDistance(self.current_stop.stopid, possible_next_stop.stopid))
-            stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow((1 / distance),
+            distance = float(tManager.getDistanceByMatrix(self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier))
+            stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow((1 / distance if distance else 0),
                                                                                                   self.discountBeta)
             total_attraction += stopAttraction[possible_next_stop]
 

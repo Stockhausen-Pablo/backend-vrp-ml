@@ -6,7 +6,7 @@ from src.Tour.Stop import Stop
 from src.Utils.helper import linalg_norm_T
 
 stops: List[Stop] = []
-distances: List[List[float]] = []
+
 
 def setup_distanceMatrix():
     df_new_distanceMatrix = pd.DataFrame(index=[stop.hashIdentifier for stop in stops],
@@ -15,7 +15,7 @@ def setup_distanceMatrix():
     return df_new_distanceMatrix
 
 
-distanceMatrix= setup_distanceMatrix()
+distanceMatrix = setup_distanceMatrix()
 capacityDemands = dict()
 
 
@@ -39,14 +39,6 @@ def getLength() -> int:
     return len(stops)
 
 
-def calculateDistances() -> None:
-    for start in stops:
-        distances_from_start = []
-        for end in stops:
-            distances_from_start.append(linalg_norm_T(start, end))
-        distances.append(distances_from_start)
-
-
 def calculateDistanceMatrix() -> None:
     for stop_i in stops:
         for stop_j in stops:
@@ -67,8 +59,8 @@ def getDistances():
     return distanceMatrix
 
 
-def getDistance(index_a: int, index_b: int) -> float:
-    return distances[index_a][index_b]
+def getDistanceByMatrix(hash_a: float, hash_b: float) -> float:
+    return distanceMatrix.at[hash_a, hash_b].astype(float)
 
 
 def getCapacityDemands():
@@ -77,4 +69,5 @@ def getCapacityDemands():
 
 def clear():
     stops.clear()
-    distances.clear()
+    distanceMatrix.iloc[0:0]
+

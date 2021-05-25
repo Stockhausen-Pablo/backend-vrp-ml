@@ -20,8 +20,7 @@ def loadStopData(dataSet):
         next(csv_reader, None)
         for row in csv_reader:
             tManager.addStop(
-                Stop(float(row[0]), int(row[1]), float(row[3]), float(row[2]), int(row[4]), int(row[5])))
-    tManager.calculateDistances()
+                Stop(float(row[0]), int(row[1]), float(row[2]), float(row[3]), int(row[4]), int(row[5])))
     tManager.calculateDistanceMatrix()
     tManager.initCapacityDemands()
 

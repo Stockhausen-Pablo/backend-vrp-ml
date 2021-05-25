@@ -51,7 +51,8 @@ class AntManager:
         self.ants = self.setAnts(self.start_stop)
 
         # For Solution
-        self.ant_probability_Matrix = load_memory_df_from_local('./probabilityMatrixByAnts.pkl', self.nodes)
+        #self.ant_probability_Matrix = load_memory_df_from_local('./probabilityMatrixByAnts.pkl', self.nodes)
+        self.ant_probability_Matrix = self.setup_antProbabilyMatrix()
         self.shortest_distance = None
         self.shortest_path = None
         self.winner_ant = None
@@ -66,6 +67,12 @@ class AntManager:
         for ant in self.ants:
             ant.__init__(startStop, startStop, self.antWeight, self.antVolume, self.nodes, self.df_pheromoneMatrix,
                          self.discountAlpha, self.discountBeta, self.pheromone_evaporation_coefficient, firstInit=False)
+
+    def setup_antProbabilyMatrix(self):
+        df_new_antProbabilyMatrix = pd.DataFrame(index=[node.hashIdentifier for node in self.nodes],
+                                              columns=[node.hashIdentifier for node in self.nodes])
+        df_new_antProbabilyMatrix.fillna(value=0.0, inplace=True)
+        return df_new_antProbabilyMatrix
 
     def setup_pheromoneMatrix(self):
         df_new_pheromoneMatrix = pd.DataFrame(index=[node.hashIdentifier for node in self.nodes],
@@ -82,7 +89,7 @@ class AntManager:
                 # (\eta_{i,j})}^\beta
                 stop_row = next((node for node in self.nodes if node.hashIdentifier == i), None)
                 stop_col = next((node for node in self.nodes if node.hashIdentifier == j), None)
-                eta_i_j = float(tManager.getDistance(stop_row.stopid, stop_col.stopid))
+                eta_i_j = float(tManager.getDistanceByMatrix(stop_row.hashIdentifier, stop_col.hashIdentifier))
                 # get the sum of all probabilities
                 sum_all_probabilities += (tau_i_j * eta_i_j)
             break
@@ -94,7 +101,7 @@ class AntManager:
                 # (\eta_{i,j})}^\beta
                 stop_row = next((node for node in self.nodes if node.hashIdentifier == i), None)
                 stop_col = next((node for node in self.nodes if node.hashIdentifier == j), None)
-                eta_i_j = tManager.getDistance(stop_row.stopid, stop_col.stopid)
+                eta_i_j = tManager.getDistanceByMatrix(stop_row.hashIdentifier, stop_col.hashIdentifier)
                 # calculate Probability
                 probability_i_j = float(((tau_i_j * eta_i_j) / sum_all_probabilities))
                 # set Probability
@@ -123,7 +130,7 @@ class AntManager:
                 else:
                     stop_b = tour[index + 1]
 
-                new_pheromoneValue = self.pheromone_constant / ant.get_travelled_Distance()  # 1/Total Length
+                new_pheromoneValue = float(self.pheromone_constant / ant.get_travelled_Distance())  # 1/Total Length
                 self.df_updated_pheromoneMatrix.at[stop.hashIdentifier, stop_b.hashIdentifier] += new_pheromoneValue
                 self.df_updated_pheromoneMatrix.at[stop_b.hashIdentifier, stop.hashIdentifier] += new_pheromoneValue
                 # self.updated_pheromoneMatrix[stop.stopid][stop_b.stopid] += new_pheromoneValue

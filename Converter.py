@@ -7,7 +7,7 @@ print("-Specification of the file name-")
 print("-The relevant data are located in the folder data/toConvert-")
 dataSet = input("Please enter the name of the file:")
 
-df_convertedStops = pd.DataFrame(columns=["stopIdentifier", "stopNr", "Latitude", "Longitude", "DemandWeight", "DemandVolume"])
+df_convertedStops = pd.DataFrame(columns=["stopIdentifier", "stopNr", "Longitude", "Latitude", "DemandWeight", "DemandVolume"])
 
 print("Trying to open the file...")
 with open('data/toConvert/' + dataSet + '.csv', 'r') as file:
