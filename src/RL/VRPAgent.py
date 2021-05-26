@@ -10,14 +10,22 @@ from src.Utils.helper import normalize_list
 
 
 class VRPAgent:
+    """
+    REINFORCE (Monte Carlo Policy Gradient) Agent.
+    Optimizes the policy function approximator using policy gradient.
+    """
+
     EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "episode_tours"])
 
-    def __init__(self, env, policyManager, num_episodes):
+    def __init__(self, env, policyManager, num_episodes, epsilon=0.5, alpha=0.5, gamma=0.9, epsilon_decay=1):
         self.env = env
         self.policyManager = policyManager
         self.num_episodes = num_episodes
-        self.collect_episodes_per_iteration = 2
-        self.episodesStatistics = VRPAgent.EpisodeStats(
+        self.epsilon = epsilon
+        self.alpha = alpha
+        self.gamma = gamma
+        self.epsilon_decay = epsilon_decay
+        self.episode_statistics = VRPAgent.EpisodeStats(
             episode_lengths=np.zeros(num_episodes),
             episode_rewards=np.zeros(num_episodes),
             episode_tours=[[] for i in range(num_episodes)]
@@ -26,24 +34,55 @@ class VRPAgent:
         self.Transition = collections.namedtuple("Transition",
                                                  ["state", "action", "action_prob", "reward", "next_state", "done"])
 
-    def train_model(self, gamma, epsilon, discountFactor):
-        episodeList = []
+    def compute_G_t(self, episode, gamma):
+        """
+        args
+          a list of rewards
+        returns
+          a list of cummulated rewards G_t = R_{t+1} + gamma*R_{t+2} + gamma^2*R_{t+3} + .. + gamma^{T-t-1}*R_{T}
+        """
+        G_t = [0] * len(episode)
 
+        for i, step_t in enumerate(episode):
+            G_t[i] = gamma ** i * step_t.reward
+
+        return G_t
+
+    def train_model(self, gamma, epsilon, discountFactor):
         # Initialize a random policy
         state_hashes = self.env.getStateHashes()
-        policy_prev = pd.DataFrame(index=state_hashes[1:], columns=["best_a", "possible_actions"])
+        policy_prev = pd.DataFrame(index=state_hashes, columns=[self.env.actions])
         policy_prev.fillna(value=0.0, inplace=True)
-        policy_prev["possible_actions"] = policy_prev["possible_actions"].astype('object')
+        policy_prev = policy_prev + (1/len(self.env.actions))
+
+        # Initialize Metainformation
+        episodicRewards = []
+        discountedRewards = []
+        episodeHistory = []
+        q_values = self.policyManager.q_values.copy()
+
         for epoch in range(self.num_episodes):
-            policy_prev = self.startEpisode(policy_prev, epoch, discountFactor)
-            self.env.reset()
-            episodeList.append(self.episode)
+            self.runEpisode2(policy_prev, epoch, discountFactor)
+            G_t = self.compute_G_t(self.episode, self.gamma)
+            for i, step_t in enumerate(self.episode):
+                c = step_t.state
+                a = step_t.action
+                n = step_t.next_state
+                r = step_t.reward
+                q_values[(c, a)] = self.policyManager.get_qvalue(c, a) + max(1 / self.n_s_a.get((c, a)), self.alpha) * (
+                            G_t[i] - self.get_qvalue(c, a))
+
+
+            episodicRewards.append(self.episode_statistics.episode_rewards[epoch])
+            episodeHistory.append(self.episode)
             total_discounted_reward = sum(discountFactor ** i * step_t.reward for i, step_t in enumerate(self.episode))
+            discountedRewards.append(total_discounted_reward)
+            self.env.reset()
             policy_next, v = self.policyManager.policy_iteration(policy_prev, self.env, self.episode)
             if policy_next.equals(policy_prev):
                 break
             policy_prev.update(policy_next)
-        return self.episodesStatistics
+        return self.episode_statistics
 
     def update(self, state, action, action_prob, reward, next_state, done):
         return self.episode.append(self.Transition(
@@ -55,13 +94,41 @@ class VRPAgent:
     def observeTransition(self, action, actionNr):
         return self.env.step(action, actionNr)
 
-    def startEpisode(self, policy, epoch, discountFactor):
+    def observeTransition2(self, action):
+        return self.env.takeStep(action)
+
+    def runEpisode2(self, policy, epoch, discountFactor):
+        state = self.env.reset()
+        self.episode = []
+        for step_t in itertools.count():
+            action_probs = policy.loc[state.hashIdentifier].to_numpy()
+            action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+            next_state, reward, done, currentTour, currentTours = self.observeTransition2(action)
+
+            self.update(state, action, action_probs[action], reward, next_state, done)
+
+            # Update statistics
+            self.episode_statistics.episode_rewards[epoch] += reward
+            self.episode_statistics.episode_lengths[epoch] = step_t
+            self.episode_statistics.episode_tours[epoch] = currentTours
+
+            # Print out which step is active
+            print("\rStep {} @ Episode {}/{} ({})".format(
+                step_t, epoch + 1, self.num_episodes, self.episode_statistics.episode_rewards[epoch]), end="")
+
+            if done:
+                break
+
+            state = next_state
+
+
+    def runEpisode(self, policy, epoch, discountFactor):
         state = self.env.reset()
         self.episode = []
         microhubCounter = 0
         for step_t in itertools.count():
             policy_best_action = 0.0
-            legalActions = self.getLegalActions()
+            legalActions, env_Action = self.getLegalActions()
             action_prob = 1/len(legalActions)
             actionBackToDepot = self.env.getMicrohubId()
             if state.hashIdentifier == actionBackToDepot:
@@ -93,13 +160,13 @@ class VRPAgent:
             self.update(state, action, action_prob, reward, next_state, done)
 
             # Update statistics
-            self.episodesStatistics.episode_rewards[epoch] += reward
-            self.episodesStatistics.episode_lengths[epoch] = step_t
-            self.episodesStatistics.episode_tours[epoch] = currentTours
+            self.episode_statistics.episode_rewards[epoch] += reward
+            self.episode_statistics.episode_lengths[epoch] = step_t
+            self.episode_statistics.episode_tours[epoch] = currentTours
 
             # Print out which step is active
             print("\rStep {} @ Episode {}/{} ({})".format(
-                step_t, epoch + 1, self.num_episodes, self.episodesStatistics.episode_rewards[epoch]), end="")
+                step_t, epoch + 1, self.num_episodes, self.episode_statistics.episode_rewards[epoch]), end="")
 
             if state.hashIdentifier == actionBackToDepot:
                 microhubCounter += 1

@@ -166,6 +166,6 @@ class AntManager:
 
         self.updateProbabilityMatrix()
 
-        save_memory_df_to_local('./probabilityMatrixByAnts.pkl', self.ant_probability_Matrix)
+        #save_memory_df_to_local('./probabilityMatrixByAnts.pkl', self.ant_probability_Matrix)
 
-        return self.shortest_distance, self.shortest_path, self.df_pheromoneMatrix, self.ant_probability_Matrix
+        return self.shortest_distance, self.shortest_path, self.ant_probability_Matrix

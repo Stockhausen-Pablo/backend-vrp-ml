@@ -1,16 +1,19 @@
 import numpy as np
 import math
 
+
 def linalg_norm_T(startStop, endStop):
     a = [startStop.longitude, startStop.latitude]
     b = [endStop.longitude, endStop.latitude]
     distance = np.linalg.norm(np.array(a) - np.array(b), axis=0) * 100
     return distance * math.sqrt(2)
 
+
 def normalize_list(probList):
     s = sum(probList)
     normRow = [float(i) / s for i in probList]
     return normRow
+
 
 def normalize_df(df):
     for row in df:

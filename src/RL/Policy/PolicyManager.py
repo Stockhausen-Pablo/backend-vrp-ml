@@ -8,6 +8,10 @@ class PolicyManager:
     def __init__(self, discountFactor=1.0, theta=0.00001):
         self.discountFactor = discountFactor
         self.theta = float(theta)
+        # map: {(state, action): q-value}
+        self.q_values = {}
+        # map: {state: action}
+        self.policy = {}
 
     def policy_eval(self, env, policy, values, gamma=0.9, theta=0.01):
         microhubCounter = 0
@@ -56,18 +60,7 @@ class PolicyManager:
     #     return V
 
     def policy_improvement(self, values, env, policy, episode, gamma, discount_factor=1.0):
-        def one_step_lookahead(state, V):
-            state_hashes = env.getStateHashes()
-            A = {state: 0.0 for state in state_hashes}
-            for action in state_hashes:
-                prob = env.getTransitionProbability(state, action)
-                reward = env.reward_func_hash(state, action)
-                A[action] += prob * (reward + discount_factor * V[action])
-            return A
-
         policy_stable = True
-        microhubCounter = 0
-        microhubId = env.getMicrohubId()
         for s in env.states:
             argmax_q = -np.inf
             best_a = None
@@ -126,3 +119,14 @@ class PolicyManager:
                 break
 
         return policy_next, values
+
+    def get_qvalue(self, s, a):
+        if (s, a) in self.q_values:
+            return self.q_values[(s, a)]
+        else:
+            # set to 0
+            self.q_values[(s, a)] = 0
+            return 0
+
+    def set_qvalue(self, s, a, v):
+        self.q_values[(s, a)] = v

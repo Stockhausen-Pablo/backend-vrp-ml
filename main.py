@@ -26,6 +26,7 @@ def loadStopData(dataSet):
 
 
 def main(args):
+    # ------------------
     # Input
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
@@ -34,7 +35,7 @@ def main(args):
     capacityWeight = float(input("What is the maximum weight that the vehicle can carry:"))
     capacityVolume = float(input("What is the maximum volume that the vehicle can hold:"))
 
-    # -----
+    # ------------------
     tManager.clear()
 
     # Load Stop Data
@@ -66,24 +67,26 @@ def main(args):
         )
         # ------------------
         # Retrieving solution from ACO and preparing further transformation
-
         resultACO = antManager.runACO()
         ant_shortest_distance = resultACO[0]
         ant_shortest_path = resultACO[1]
-        ant_df_pheromoneMatrix = resultACO[2]
-        ant_probability_Matrix = resultACO[3]
+        aco_probability_Matrix = resultACO[2]
 
-        # Normalize
-        normalized_probability_Matrix = normalize_df(ant_probability_Matrix)
+        # ------------------
+        # Normalize the probability Matrix
+        normalized_probability_Matrix = normalize_df(aco_probability_Matrix)
 
         # ------------------
         # Setting up MDP-Environment
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
-            actions=[[0, 1], [1], [0]],
+            actions=[0, 1, 2],
+            # actions:
+            # 0 = select microhub if tour full and possible Stops != null
+            # 1 = select unvisited Node from possible Stops
+            # 2 = select microhub if tour full and possible Stops = null
             probabilityMatrix=normalized_probability_Matrix,
             distanceMatrix=distanceMatrix,
-            rewardFunction=0,
             microHub=tManager.getMicrohub(),
             capacityDemands=tManager.getCapacityDemands(),
             vehicles=amountVehicles,
