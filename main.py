@@ -9,6 +9,7 @@ from src.Utils.helper import normalize_df
 from src.Utils import plotting
 from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.VRPAgent import VRPAgent
+from src.RL.ReinforceAgent import ReinforceAgent
 from src.Aco.AntManager import AntManager
 from src.RL.Policy.PolicyManager import PolicyManager
 
@@ -80,11 +81,11 @@ def main(args):
         # Setting up MDP-Environment
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
-            actions=[0, 1, 2],
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
+            actions=[0, 1, 2],
             probabilityMatrix=normalized_probability_Matrix,
             distanceMatrix=distanceMatrix,
             microHub=tManager.getMicrohub(),
@@ -94,13 +95,13 @@ def main(args):
             vehicleVolume=capacityVolume
         )
 
-        policyManager = PolicyManager()
+        policyManager = PolicyManager(environment.getStateHashes(), environment.actions, normalized_probability_Matrix)
 
-        agent = VRPAgent(env= environment,
+        agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=5)
+                         num_episodes=500)
 
-        episodeStatistics = agent.train_model(gamma=0.5, epsilon=0.5, discountFactor=0.2)
+        episodeStatistics, policy_action_space = agent.train_model()
 
         plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
 
