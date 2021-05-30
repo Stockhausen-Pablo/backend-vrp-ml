@@ -99,7 +99,7 @@ def main(args):
 
         agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=500)
+                         num_episodes=2000)
 
         episodeStatistics, policy_action_space = agent.train_model()
 

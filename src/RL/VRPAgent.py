@@ -33,7 +33,9 @@ class VRPAgent:
                                                   "next_state",
                                                   "done",
                                                   "possible_next_states",
-                                                  "possible_rewards"
+                                                  "possible_next_states_hub_ignored",
+                                                  "possible_rewards",
+                                                  "microhub_counter"
                                                   ]
                                                  )
         self.episode_statistics = VRPAgent.EpisodeStats(
@@ -47,7 +49,7 @@ class VRPAgent:
     def train_model(self):
         for epoch in range(self.num_episodes):
             self.runEpisode(epoch)
-            G_t, J_avR, loseHistory = self.policyManager.policy_update_by_learning(self.env, self.episode, self.gamma)
+            G_t, J_avR, loseHistory = self.policyManager.policy_update_by_learning(self.env, self.episode, self.gamma, self.max_steps, epoch)
 
             # Update Metainformation
             self.episode_statistics.episode_G_t[epoch] = sum(G_t)
@@ -57,8 +59,8 @@ class VRPAgent:
 
         return self.episode_statistics, self.policyManager.policy_action_space
 
-    def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states,
-               possible_rewards):
+    def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states, possible_next_states_hub_ignored,
+               possible_rewards, microhub_counter):
         return self.episode.append(
             self.Transition(
                 state=state,
@@ -68,7 +70,9 @@ class VRPAgent:
                 next_state=next_state,
                 done=done,
                 possible_next_states=possible_next_states,
-                possible_rewards=possible_rewards
+                possible_next_states_hub_ignored = possible_next_states_hub_ignored,
+                possible_rewards=possible_rewards,
+                microhub_counter=microhub_counter
             )
         )
 
@@ -86,16 +90,16 @@ class VRPAgent:
         self.episode = []
         for step_t in range(self.max_steps):
             # Check Policy Estimation
-            legal_next_action, legal_next_states = self.getLegalAction()
-            possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier, legal_next_states)
-            action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states)
+            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, microhub_counter = self.getLegalAction()
+            possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier, legal_next_states if legal_next_action == 1 else [self.env.get_microhub_hash()])
+            action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states, microhub_counter)
 
             # take a step by policy
             next_state, reward, done, currentTour, currentTours = self.observeTransition(legal_next_action,
                                                                                          action_space)
 
-            self.update(state, legal_next_action, action_space_prob, reward, next_state, done, legal_next_states,
-                        possible_rewards)
+            self.update(state, legal_next_action, action_space_prob, reward, next_state, done, legal_next_states, legal_next_states_hubs_ignored,
+                        possible_rewards, microhub_counter)
 
             # Update statistics
             self.episode_statistics.episode_rewards[epoch] += reward
