@@ -11,7 +11,7 @@ class VRPAgent:
     Agent is set to Off-Policy behaviour / Since one full trajectory must be completed to construct a sample space
     """
 
-    EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR"])
+    EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR", "episode_policy_reward"])
 
     def __init__(self, env, policyManager, num_episodes, alpha=0.5, gamma=0.95, eps=0.05):
         self.env = env
@@ -43,18 +43,22 @@ class VRPAgent:
             episode_rewards=np.zeros(num_episodes),
             episode_tours=[[] for i in range(num_episodes)],
             episode_G_t=np.zeros(num_episodes),
-            episode_J_avR=np.zeros(num_episodes)
+            episode_J_avR=np.zeros(num_episodes),
+            episode_policy_reward=np.zeros(num_episodes)
         )
 
     def train_model(self):
         for epoch in range(self.num_episodes):
             self.runEpisode(epoch)
-            G_t, J_avR, loseHistory = self.policyManager.policy_update_by_learning(self.env, self.episode, self.gamma, self.max_steps, epoch)
+            G_t, J_avR, loseHistory, eps, policy_reward = self.policyManager.policy_update_by_learning(self.env, self.episode, self.episode_statistics.episode_rewards[epoch], self.gamma, self.max_steps, self.num_episodes, epoch)
+
 
             # Update Metainformation
             self.episode_statistics.episode_G_t[epoch] = sum(G_t)
             self.episode_statistics.episode_J_avR[epoch] = J_avR
+            self.episode_statistics.episode_policy_reward[epoch] = policy_reward
 
+            self.eps = eps
             self.env.reset()
 
         return self.episode_statistics, self.policyManager.policy_action_space
@@ -86,27 +90,41 @@ class VRPAgent:
         return self.env.step(action, action_space)
 
     def runEpisode(self, epoch):
+        # --------------------
+        # PREPARE EPOCH RUN
         state = self.env.reset()
         self.episode = []
+
         for step_t in range(self.max_steps):
-            # Check Policy Estimation
+            # --------------------
+            # LEGAL NEXT STATES
+            # given by the environment
             legal_next_action, legal_next_states, legal_next_states_hubs_ignored, microhub_counter = self.getLegalAction()
             possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier, legal_next_states if legal_next_action == 1 else [self.env.get_microhub_hash()])
+
+            # --------------------
+            # CHOOSE ACTION SPACE
             action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states, microhub_counter)
 
-            # take a step by policy
+            # --------------------
+            # DO STEP IN ENVIRONMENT
+            # follow policy
             next_state, reward, done, currentTour, currentTours = self.observeTransition(legal_next_action,
                                                                                          action_space)
 
+            # --------------------
+            # SAVE TRANSITION
             self.update(state, legal_next_action, action_space_prob, reward, next_state, done, legal_next_states, legal_next_states_hubs_ignored,
                         possible_rewards, microhub_counter)
 
-            # Update statistics
+            # --------------------
+            # UPDATE EPISODE STATISTICS
             self.episode_statistics.episode_rewards[epoch] += reward
             self.episode_statistics.episode_lengths[epoch] = step_t
             self.episode_statistics.episode_tours[epoch] = currentTours
 
-            # Print out which step is active
+            # --------------------
+            # PRINT EPOCH PROGRESS
             print("Step {} @ Episode {}/{} ({})\n".format(
                 step_t, epoch + 1, self.num_episodes, self.episode_statistics.episode_rewards[epoch]), end="")
 
@@ -114,16 +132,3 @@ class VRPAgent:
                 break
 
             state = next_state
-
-        # for step_t, transition in enumerate(self.episode):
-        # The return after this timestep
-        # G_t
-        # total_discounted_reward = sum(discountFactor ** i * step_t.reward for i, step_t in enumerate(self.episode[step_t:]))
-        # Calculate baseline/advantage
-        # V = policyManager.policy_eval(transition)
-        # baseline_value = self.estimator_value.predict(transition.state)
-        # advantage = total_discounted_reward - baseline_value
-        # Update our value estimator
-        # estimator_value.update(transition.state, total_return)
-        # Update our policy estimator
-        # estimator_policy.update(transition.state, advantage, transition.action)

@@ -164,5 +164,5 @@ class VRPEnvironment:
             legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, self.microhub_counter))
             legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
             action = 0
-            self.microhub_counter +=1
+            self.microhub_counter += 1
             return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter

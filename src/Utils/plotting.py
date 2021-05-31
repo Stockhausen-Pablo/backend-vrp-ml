@@ -122,4 +122,15 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     else:
         fig5.show()
 
-    return fig1, fig2, fig3, fig4, fig5
+    # Plot optimal policy reward over episode
+    fig6 = plt.figure(figsize=(10, 5))
+    plt.plot(stats.episode_policy_reward)
+    plt.xlabel("Episode")
+    plt.ylabel("Optimal Policy Reward")
+    plt.title("Optimal Policy Reward per Episode")
+    if noshow:
+        fig6.close()
+    else:
+        fig6.show()
+
+    return fig1, fig2, fig3, fig4, fig5, fig6

@@ -70,6 +70,6 @@ def softmax(X, theta=1.0, axis=None):
     p = y / ax_sum
 
     # flatten if X was 1D
-    #if len(X.shape) == 1: p = p.flatten()
+    if len(X.shape) == 1: p = p.flatten()
 
     return p
