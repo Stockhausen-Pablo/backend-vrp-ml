@@ -1,17 +1,15 @@
 import csv
-from argsConfig import getParams
 
 import src.Tour.TourManager as tManager
-
-from src.Tour.Stop import Stop
-from src.Utils.plotter import plotCoordinates
-from src.Utils.helper import normalize_df
-from src.Utils import plotting
-from src.Mdp.VRPEnvironment import VRPEnvironment
-from src.RL.VRPAgent import VRPAgent
+from argsConfig import getParams
 from src.Aco.AntManager import AntManager
+from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.Policy.PolicyManager import PolicyManager
-
+from src.RL.VRPAgent import VRPAgent
+from src.Tour.Stop import Stop
+from src.Utils import plotting
+from src.Utils.helper import normalize_df
+from src.Utils.plotter import plotCoordinates
 
 
 def loadStopData(dataSet):
@@ -26,8 +24,9 @@ def loadStopData(dataSet):
 
 
 def main(args):
-    # ------------------
-    # Input
+    # --------------------
+    # INPUT
+    # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
     dataSet = input("Please specify the data source of the stops to be processed:")
@@ -35,23 +34,27 @@ def main(args):
     capacityWeight = float(input("What is the maximum weight that the vehicle can carry:"))
     capacityVolume = float(input("What is the maximum volume that the vehicle can hold:"))
 
-    # ------------------
-    tManager.clear()
-
+    # --------------------
+    # SETTING UP TOUR MANAGER
     # Load Stop Data
+    tManager.clear()
     loadStopData(dataSet)
 
     # Setup Distance Matrix for later use
     distanceMatrix = tManager.getDistances()
 
-    # Plot Coordinates of input stops
+    # --------------------
+    # PLOT COORDINATES
+    # overview of problem space (input)
     plotCoordinates()
 
     if args['train']:
+        # --------------------TRAINING MODE--------------------
         print("-Entered Training Mode-")
 
-        # ------------------
-        # Setting up and Running ACO
+        # --------------------
+        # ANT COLONY OPTIMIZATION
+        # setting up and running ACO
         print("-Starting up Ant Colony Optimization to get Probability Matrix-")
         antManager = AntManager(
             stops=tManager.getListOfStops(),
@@ -65,26 +68,30 @@ def main(args):
             pheromone_constant=1.0,
             iterations=80
         )
-        # ------------------
-        # Retrieving solution from ACO and preparing further transformation
+
+        # --------------------
+        # ACO RESULTS
+        # retrieving solution from ACO and preparing further transformation
         resultACO = antManager.runACO()
         ant_shortest_distance = resultACO[0]
         ant_shortest_path = resultACO[1]
         aco_probability_Matrix = resultACO[2]
 
-        # ------------------
-        # Normalize the probability Matrix
+        # --------------------
+        # NORMALIZING PROBABILITIES
+        # normalize the ant probability Matrix
         normalized_probability_Matrix = normalize_df(aco_probability_Matrix)
 
-        # ------------------
-        # Setting up MDP-Environment
+        # --------------------
+        # ENVIRONMENT
+        # setting up MDP-Environment
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
-            actions=[0, 1, 2],
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
+            actions=[0, 1, 2],
             probabilityMatrix=normalized_probability_Matrix,
             distanceMatrix=distanceMatrix,
             microHub=tManager.getMicrohub(),
@@ -94,17 +101,26 @@ def main(args):
             vehicleVolume=capacityVolume
         )
 
-        policyManager = PolicyManager()
+        # --------------------
+        # POLICY NETWORK
+        policyManager = PolicyManager(environment.getStateHashes(), environment.actions, normalized_probability_Matrix)
 
-        agent = VRPAgent(env= environment,
+        # --------------------
+        # AGENT
+        agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=5)
+                         num_episodes=2000)
 
-        episodeStatistics = agent.train_model(gamma=0.5, epsilon=0.5, discountFactor=0.2)
+        # --------------------
+        # TRAINING RESULTS
+        episodeStatistics, policy_action_space = agent.train_model()
 
+        # --------------------
+        # PLOTTING TRAINING RESULTS
         plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
 
         if args['test']:
+            # --------------------TESTING MODE--------------------
             print("Testig")
 
 

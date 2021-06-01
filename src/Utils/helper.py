@@ -9,6 +9,10 @@ def linalg_norm_T(startStop, endStop):
     return distance * math.sqrt(2)
 
 
+def rectified(x):
+    return max(0.0, x)
+
+
 def normalize_list(probList):
     s = sum(probList)
     normRow = [float(i) / s for i in probList]
@@ -24,18 +28,14 @@ def normalize_df(df):
     return df
 
 
-def applySoftmax(df_probabilityMatrix):
-    for row in df_probabilityMatrix:
-        toNormalizeRow = df_probabilityMatrix[row].to_numpy()
-        softmaxRow = softmax(toNormalizeRow)
-        df_probabilityMatrix[row] = softmaxRow
-    return df_probabilityMatrix
-
+def activationBySoftmax(X):
+    z = np.exp(np.array((X - max(X)), float))
+    y = np.sum(z)
+    return z / y
 
 def softmax(X, theta=1.0, axis=None):
     """
     Compute the softmax of each element along an axis of X.
-
     Parameters
     ----------
     X: ND-Array. Probably should be floats.
@@ -43,7 +43,6 @@ def softmax(X, theta=1.0, axis=None):
         prior to exponentiation. Default = 1.0
     axis (optional): axis to compute values along. Default is the
         first non-singleton axis.
-
     Returns an array the same size as X. The result will sum to 1
     along the specified axis.
     """

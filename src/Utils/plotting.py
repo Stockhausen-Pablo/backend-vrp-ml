@@ -100,4 +100,37 @@ def plot_episode_stats(stats, smoothing_window=10, noshow=False):
     else:
         fig3.show()
 
-    return fig1, fig2, fig3
+    # Plot average Reward per Timestep
+    fig4 = plt.figure(figsize=(10, 5))
+    plt.plot(stats.episode_J_avR)
+    plt.xlabel("Episode")
+    plt.ylabel("Average Reward")
+    plt.title("Average Reward per Timestep")
+    if noshow:
+        fig4.close()
+    else:
+        fig4.show()
+
+    # Plot discounted Reward over timestep
+    fig5 = plt.figure(figsize=(10, 5))
+    plt.plot(stats.episode_G_t)
+    plt.xlabel("Episode")
+    plt.ylabel("Discounted Reward")
+    plt.title("Discounted Reward per Episode")
+    if noshow:
+        fig5.close()
+    else:
+        fig5.show()
+
+    # Plot optimal policy reward over episode
+    fig6 = plt.figure(figsize=(10, 5))
+    plt.plot(stats.episode_policy_reward)
+    plt.xlabel("Episode")
+    plt.ylabel("Optimal Policy Reward")
+    plt.title("Optimal Policy Reward per Episode")
+    if noshow:
+        fig6.close()
+    else:
+        fig6.show()
+
+    return fig1, fig2, fig3, fig4, fig5, fig6

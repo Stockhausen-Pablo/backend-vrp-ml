@@ -1,8 +1,8 @@
-import numpy as np
-from src.Utils.helper import normalize_list
-
-
 class VRPEnvironment:
+    """
+    MDP-Model" is provided inside code for the environment
+        a predictive model of the env that resolves probabilities of next reward and next state following an action from a state
+    """
 
     def __init__(self, states, actions, probabilityMatrix, distanceMatrix, microHub, capacityDemands,
                  vehicles, vehicleWeight, vehicleVolume):
@@ -11,6 +11,7 @@ class VRPEnvironment:
         self.probabilityMatrix = probabilityMatrix
         self.distanceMatrix = distanceMatrix
         self.microHub = microHub
+        self.microhub_counter = 0
 
         # demands
         self.vehicles = vehicles
@@ -38,23 +39,18 @@ class VRPEnvironment:
         self.done = False
         self.resetPossibleStops()
         self.resetTours()
+        self.microhub_counter = 0
         return self.current_state
 
-    def takeStep(self, action):
-        legal_next_states, legal_action = self.getLegalActions()
+    def step(self, action, suggested_next_state):
+        if action == 0:
+            return self.evaluate_action_0()
 
-        if legal_action != action:
-            reward = 5000
-            return self.current_state, reward, self.done, self.current_tour, self.allTours
-        else:
-            if action == 0:
-                return self.evaluate_action_0()
+        if action == 1:
+            return self.evaluate_action_1(suggested_next_state)
 
-            if action == 1:
-                return self.evaluate_action_1(legal_next_states)
-
-            if action == 2:
-                return self.evaluate_action_2()
+        if action == 2:
+            return self.evaluate_action_2()
 
     def evaluate_action_0(self):
         next_state = self.getMicrohub()
@@ -64,11 +60,8 @@ class VRPEnvironment:
         self.resetTour()
         return next_state, reward, self.done, self.current_tour, self.allTours
 
-    def evaluate_action_1(self, legal_next_states):
-        next_states_prob = self.probabilityMatrix.loc[self.current_state.hashIdentifier, legal_next_states].to_numpy()
-        next_states_prob = normalize_list(next_states_prob) if len(legal_next_states) > 1 else [1.0]
-        next_state_hash = np.random.choice(legal_next_states, p=next_states_prob)
-        next_state = self.getStateByHash(next_state_hash)
+    def evaluate_action_1(self, suggested_next_state):
+        next_state = self.getStateByHash(suggested_next_state)
         reward = self.reward_func(self.current_state, next_state)
         self.current_state = next_state
         self.updateTourMeta(next_state)
@@ -82,33 +75,6 @@ class VRPEnvironment:
         self.done = True
         self.resetTour()
         return next_state, reward, self.done, self.current_tour, self.allTours
-
-    def step(self, action, actionNr):
-        # Check which action got selected : 0 = back to Depot ; 1 = select unvisited Node
-        if action == 0:
-            print("--Action 0 was selected")
-            print("--The last stop of the tour will be the Microhub and the tour is completed.")
-            if not self.possibleStops:
-                self.done = True
-            reward = self.reward_func(self.current_state, self.microHub)
-            self.current_tour.append(self.microHub)
-            self.allTours.append(self.current_tour)
-            self.current_state = self.microHub
-            self.resetTour()
-            return self.microHub, reward, self.done, self.current_tour, self.allTours
-        else:
-            print("--Action 1 was selected")
-            print("--The next available node will be selected.")
-            relevantStop = next((x for x in self.possibleStops if x.hashIdentifier == actionNr), None)
-            reward = self.reward_func(self.current_state, relevantStop)
-            if not self.possibleStops:
-                self.allTours.append(self.current_tour)
-                self.done = True
-            self.possibleStops.remove(relevantStop)
-            self.current_tour.append(relevantStop)
-            self.current_tour_weight += relevantStop.demandWeight
-            self.current_tour_volume += relevantStop.demandVolume
-            return relevantStop, reward, self.done, self.current_tour, self.allTours
 
     def predict(self, state_i, legalActions):
         listPredictions = []
@@ -160,30 +126,43 @@ class VRPEnvironment:
     def getMicrohub(self):
         return self.microHub
 
+    def get_microhub_hash(self):
+        return self.microHub.hashIdentifier
+
     def getStateByHash(self, hashIdentifier):
         return next((state for state in self.states if state.hashIdentifier == hashIdentifier), None)
 
     def getStateHashes(self):
         return [state.hashIdentifier for state in self.states]
 
-    def getLegalActions(self):
+    def possible_rewards(self, state, action_space_list):
+        possible_rewards=self.distanceMatrix.loc[state, action_space_list]
+        return possible_rewards
+
+    def getLegalAction(self):
         legal_next_states = []
-        action = 0
+        legal_next_states_hubs_ignored = []
         for stop in self.possibleStops:
             possible_tour_weight = float(stop.demandWeight) + self.current_tour_weight
             possible_tour_volume = float(stop.demandVolume) + self.current_tour_volume
             if (possible_tour_weight <= self.vehicleWeight and possible_tour_volume <= self.vehicleVolume):
                 legal_next_states.append(stop.hashIdentifier)
+                legal_next_states_hubs_ignored.append(stop.hashIdentifier)
 
         if legal_next_states:
             action = 1
+            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
 
         if not legal_next_states and not self.possibleStops:
-            legal_next_states.append(self.microHub.hashIdentifier)
+            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, self.microhub_counter))
+            legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
             action = 2
+            self.microhub_counter += 1
+            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
 
         if not legal_next_states and self.possibleStops:
-            legal_next_states.append(self.microHub.hashIdentifier)
+            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, self.microhub_counter))
+            legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
             action = 0
-
-        return legal_next_states, action
+            self.microhub_counter += 1
+            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
