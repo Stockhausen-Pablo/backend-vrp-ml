@@ -170,7 +170,7 @@ class PolicyManager:
             current_weight = clip_weight(current_weight, 0.0001)  # to avoid zero division
 
             # --------------------
-            # VALUE FUNCTION
+            # VALUE FUNCTION (Policy Evaluation)
             # Get possible lowest reward | goal to minimize reward (as lowest distance)
             # earned_reward = episode[idx].reward
             baseline_estimate = self.calculate_value_func(env, episode[idx],
@@ -271,22 +271,22 @@ class PolicyManager:
 
     def calculate_value_func(self, env, episode, weights, gamma, microhub_counter, theta=0.01):
         weights_dict = weights.to_dict()
-        for s_a in episode.possible_next_states_hub_ignored:
-            s_a_stop = env.getStateByHash(s_a)
-            v = np.zeros_like(self.state_hashes, dtype=np.float32)
-            for s_n in episode.possible_next_states_hub_ignored:
-                s_next = env.getStateByHash(s_n)
-                pi_s_a = 1
-                p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
-                r = env.reward_func_hash(s_a_stop.hashIdentifier, s_n)
-                v[s_next.stopid] = pi_s_a * p * (r + gamma * self.baseline_estimate[s_next.stopid])
-            self.baseline_estimate[s_a_stop.stopid] = np.sum(v)
-            # delta = np.maximum(delta, np.absolute(self.baseline_estimate[idx_v] - old_values[idx_v]))
-            # if delta < theta:
-            #    break
-        #avR = np.mean(self.baseline_estimate)
-        #std_deviation = np.std(self.baseline_estimate) if np.std(self.baseline_estimate) > 0 else 1
-        #baseline_estimate = (self.baseline_estimate - avR) / std_deviation
+        while True:
+            delta = 0.0
+            old_values = np.copy(self.baseline_estimate)
+            for s_a in episode.possible_next_states_hub_ignored:
+                s_a_stop = env.getStateByHash(s_a)
+                v = np.zeros_like(self.state_hashes, dtype=np.float32)
+                for s_n in episode.possible_next_states_hub_ignored:
+                    s_next = env.getStateByHash(s_n)
+                    pi_s_a = 1
+                    p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
+                    r = env.reward_func_hash(s_a_stop.hashIdentifier, s_n)
+                    v[s_next.stopid] = pi_s_a * p * (r + gamma * self.baseline_estimate[s_next.stopid])
+                self.baseline_estimate[s_a_stop.stopid] = np.sum(v)
+                delta = np.maximum(delta, np.absolute(old_values[s_a_stop.stopid]) - self.baseline_estimate[s_a_stop.stopid])
+            if delta < theta:
+                break
         return self.baseline_estimate
 
     def resolve_weight(self, grad_weight, current_weight, possible_rewards):
