@@ -4,24 +4,24 @@ import random
 import numpy as np
 import pandas as pd
 
-from src.Utils.helper import normalize_list, activationBySoftmax
+from src.Utils.helper import activationBySoftmax, normalize_list, softmaxDict
 import keras.backend as K
 
 
 def clip_weight(current_weight, clipValue):
-    if current_weight == 1:
-        current_weight = current_weight - clipValue
-    if current_weight == 0:
-        current_weight = current_weight + clipValue
+    if current_weight >= 1:
+        current_weight = 1 - clipValue
+    if current_weight <= 0:
+        current_weight = 0 + clipValue
     return current_weight
 
 
 class PolicyManager:
-    def __init__(self, state_hashes, actions, aco_boost_probability_Matrix, discountFactor=1.0, theta=0.00001):
+    def __init__(self, state_hashes, actions, aco_boost_probability_Matrix, discountFactor=0.95, theta=0.00001):
         self.state_hashes = state_hashes
         self.discountFactor = discountFactor
-        self.learning_rate = 0.01
-        self.learning_rate_decay = 0.5
+        self.learning_rate = 2**-3
+        self.learning_rate_decay = 0.1
         self.eps = 0.05
         self.increasing_factor = 0.95
         self.decreasing_factor = 1.05
@@ -154,16 +154,28 @@ class PolicyManager:
         # COMPARE OLD POLICY REWARD TO EPISODE REWARD
         # increase probability factor when current episode reward > old policy reward
         old_policy_reward, old_tour = self.construct_policy(policy_action_space_copy, env, max_steps)
+        print("------------------Comparison------------------")
+        print("--------Old_Policy-vs-Current_Episode---------")
+        print("Epoch: ", epoch)
+        print("Old_Policy_Reward: ", old_policy_reward)
+        print("Current_Episode_Reward: ", episode_reward)
+
         if episode_reward < old_policy_reward:
-            self.increasing_factor = 0.92
-            self.decreasing_factor = 1.07
+            print("----------------------------------------------GOOD EPISODE----------------------------------------------------")
+            self.increasing_factor = 0.7  # 0.92
+            self.decreasing_factor = 1.20 # 1.07
             self.decrease_overall = True
+        else:
+            self.increasing_factor = 1.07
 
         for idx, g in enumerate(self.G):
+            print("------------------Step ",idx,"------------------")
             # --------------------
             # HANDLE MICROHUB PROBLEMATIC
             state_hash, next_state_hash = self.handle_multiple_tours(episode[idx].state, episode[idx].next_state,
                                                                      episode[idx].microhub_counter)
+            print("Current_state: ", state_hash)
+            print("Next_state: ", next_state_hash)
             # --------------------
             # FIND CURRENT WEIGHT FOR ACTION
             current_weight = self.policy_action_space.at[state_hash, next_state_hash]
@@ -173,36 +185,85 @@ class PolicyManager:
             # VALUE FUNCTION (Policy Evaluation)
             # Get possible lowest reward | goal to minimize reward (as lowest distance)
             # earned_reward = episode[idx].reward
+            softmax_weights = softmaxDict(self.policy_action_space.loc[state_hash, :])
             baseline_estimate = self.calculate_value_func(env, episode[idx],
-                                                          self.policy_action_space.loc[state_hash, :], gamma,
+                                                          softmax_weights, gamma,
                                                           episode[idx].microhub_counter)
-            #q_value = baseline_estimate[episode[idx].next_state.stopid] + self.learning_rate * abs(episode[idx].reward + gamma * baseline_estimate[episode[idx+1 if idx < (len(self.G)-1) else idx].state.stopid] - baseline_estimate[episode[idx].next_state.stopid])
+            print("Relevant_Baseline_Estimate: ", baseline_estimate[episode[idx].state.stopid])
 
             # --------------------
-            # ADVANTAGE
-            advantage_estimate = G_t[idx] - baseline_estimate[episode[idx].next_state.stopid]
-            # advantage_estimate = G_t[idx] - baseline
+            # ADVANTAGE / APPLY TEMPORAL DIFFERENCE ERROR
+            advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (g - baseline_estimate[episode[idx].state.stopid])
+            #advantage_estimate = g - baseline_estimate[episode[idx].state.stopid]
+            #advantage_estimate = g + ((self.discountFactor * baseline_estimate[episode[idx].next_state.stopid])-baseline_estimate[episode[idx].state.stopid])
+            print("Current_g: ", g)
+            #print("test ", test)
+            print("Advantage_Estimate: ", advantage_estimate)
 
             # --------------------
             # CALCULATE LOSE/COST
-            lose = self.custom_loss(current_weight, g, advantage_estimate)
-            loseHistory.append(lose)
+            #lose = self.custom_loss(current_weight, g, advantage_estimate)
+            #lose = self.cost(current_weight, g, advantage_estimate)
+            #loseHistory.append(lose)
+            #print("Current_lose: ", lose)
+            #gradients = self.grad(current_weight, g, advantage_estimate)
+
+            # --------------------
+            # SETUP LEARNING RATE AND GAMMA_T
+            lr = self.learning_rate
+            print("Learning_rate: ", lr)
+
+            #gamma_t = self.discountFactor/(1 + self.learning_rate_decay * epoch)
+            gamma_t = self.discountFactor
+            print("Gamma_t: ", gamma_t)
+
+            # --------------------
+            # CALCULATE AND UPDATE VALUE WEIGHT
+            value_weight = softmax_weights.get(next_state_hash)
+            value_weight = clip_weight(value_weight, 0.0001)
+            print("Current_value_weight: ", value_weight)
+
+            value_weight_new = value_weight + (lr * gamma_t * (baseline_estimate[episode[idx].next_state.stopid]))
+            value_weight_new = clip_weight(value_weight_new, 0.0001)
+            print("Current_value_weight_new: ", value_weight_new)
+
+
+            # --------------------
+            # DO STOCHASTIC GRADIENT STEP AND UPDATE PARAMETER OF POLICY
+            gradient_step = lr * gamma_t * (advantage_estimate * np.log(value_weight_new))
+            print("Gradient_step: ", gradient_step)
+
+            updated_weight = current_weight - gradient_step
+
+            #updated_weight = lr * (lose/updated_weight)
+
+            print("Current_weight: ", round(current_weight, 5))
+            print("Pre_updated__weight: ", round(updated_weight, 5))
+
+            if updated_weight > current_weight:
+                updated_weight = current_weight ** self.increasing_factor
+            if updated_weight < current_weight:
+                updated_weight = current_weight ** self.decreasing_factor
+
+            if self.decrease_overall:
+                for state in episode[idx].possible_next_states:
+                    self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
+
+            print("Updated_weight: ", round(updated_weight, 5))
 
             # --------------------
             # BACKPROPAGATION
             # Backpropagation mit Trägheitsterm fehlt
-            old_policy_prob = policy_action_space_copy.at[state_hash, next_state_hash]
-            grad_weight = -self.learning_rate * (lose / current_weight)
-            weight_new = self.resolve_weight(grad_weight, current_weight, episode[idx].possible_rewards)
-            test = (grad_weight / old_policy_prob) * advantage_estimate
+            #grad_weight = -self.learning_rate * (lose / current_weight)
+            #weight_new = self.resolve_weight(grad_weight, current_weight, episode[idx].possible_rewards)
 
             # --------------------
             # SET UPDATED NEW WEIGHT
-            if weight_new:
-                if self.decrease_overall and weight_new > current_weight:
-                    for state in episode[idx].possible_next_states:
-                        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
-                self.policy_action_space.at[state_hash, next_state_hash] = weight_new
+            #if weight_new:
+                #if self.decrease_overall and weight_new > current_weight:
+                #    for state in episode[idx].possible_next_states:
+                #        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
+            self.policy_action_space.at[state_hash, next_state_hash] = round(updated_weight, 5)
 
         # --------------------
         # DECAY LEARNING RATE
@@ -213,10 +274,13 @@ class PolicyManager:
         # --------------------
         # BUILD AND COMPARE POLICIES (OLD vs. NEW)
         new_policy_reward, new_tour = self.construct_policy(self.policy_action_space, env, max_steps)
+        print("-------------------Finalize-------------------")
+        print("New_Policy_Reward: ", new_policy_reward)
         policy_relevant_reward = new_policy_reward
-        if old_policy_reward < new_policy_reward and old_policy_reward < episode_reward:
-            self.policy_action_space = policy_action_space_copy
-            policy_relevant_reward = old_policy_reward
+
+        #if old_policy_reward < new_policy_reward:
+        #    self.policy_action_space = policy_action_space_copy
+        #    policy_relevant_reward = old_policy_reward
 
         # --------------------
         # EVALUATE INCREASING EPSILON
@@ -228,11 +292,10 @@ class PolicyManager:
 
         # --------------------
         # RESET PARAMETERS
-        self.microhub_counter = 0
         self.increasing_factor = 0.95
         self.decreasing_factor = 1.05
         self.decrease_overall = False
-        self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
+        #self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
         self.penultimate_reward = old_policy_reward
 
         # --------------------
@@ -269,20 +332,22 @@ class PolicyManager:
 
         return state_hash, next_state_hash
 
-    def calculate_value_func(self, env, episode, weights, gamma, microhub_counter, theta=0.01):
-        weights_dict = weights.to_dict()
+    def calculate_value_func(self, env, episode, weights_dict, gamma, microhub_counter, theta=0.0001):
         while True:
             delta = 0.0
             old_values = np.copy(self.baseline_estimate)
-            for s_a in episode.possible_next_states_hub_ignored:
+            for s_a in self.state_hashes:
                 s_a_stop = env.getStateByHash(s_a)
                 v = np.zeros_like(self.state_hashes, dtype=np.float32)
-                for s_n in episode.possible_next_states_hub_ignored:
+                for s_n in self.state_hashes:
                     s_next = env.getStateByHash(s_n)
                     pi_s_a = 1
                     p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
                     r = env.reward_func_hash(s_a_stop.hashIdentifier, s_n)
-                    v[s_next.stopid] = pi_s_a * p * (r + gamma * self.baseline_estimate[s_next.stopid])
+                    #v[s_next.stopid] = r + gamma * (p * self.baseline_estimate[s_next.stopid])
+                    v[s_next.stopid] = p * (r + gamma * self.baseline_estimate[s_next.stopid])
+                    #if (s_next.hashIdentifier == self.microhub_hash):
+                    #    v[s_next.stopid] *= self.microhub_counter
                 self.baseline_estimate[s_a_stop.stopid] = np.sum(v)
                 delta = np.maximum(delta, np.absolute(old_values[s_a_stop.stopid]) - self.baseline_estimate[s_a_stop.stopid])
             if delta < theta:
@@ -299,6 +364,24 @@ class PolicyManager:
             weight_new = current_weight ** self.decreasing_factor  # try to decrease probability by 5%
         return weight_new
 
+    # Alternative Logistic Model
+    def sigmoid(self, z):
+        return 1 / (1 + np.exp(-z))
+
+    def hx(self, W, X):
+        return self.sigmoid(np.dot(X, W))
+
+    def cost(self, W, X, Y):
+        y_pred = self.hx(W, X)
+        return -1 * (Y * np.log(y_pred) + (1 - Y) * np.log(1 - y_pred))
+
+    def grad(self, W, X, Y):
+        y_pred = self.hx(W, X)
+        A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
+        g = -1 * np.dot(A.T, X)
+        return g
+    # end
+
     def custom_loss(self, y_true, y_pred, advantages):  # objective function
         log_lik = y_true * K.log(y_pred)
         return K.mean(-log_lik * advantages)
@@ -309,15 +392,10 @@ class PolicyManager:
                 '{}/{}'.format(state.hashIdentifier, microhub_counter), legal_next_states].to_numpy()
         else:
             action_space_prob = policy.loc[state.hashIdentifier, legal_next_states].to_numpy()
-        normalized_action_space_prob = normalize_list(action_space_prob) if len(legal_next_states) > 1 else [1.0]
-        highest_prob = max(normalized_action_space_prob)
-        index_highest_prob = np.where(normalized_action_space_prob == highest_prob)[0]
-        if len(index_highest_prob) > 1:
-            highest_prob_action_space = np.random.choice(legal_next_states, p=normalized_action_space_prob)
-        else:
-            highest_prob_action_space = legal_next_states[index_highest_prob[0] if len(index_highest_prob) > 1 else 0]
-        # softmax_space_prob2 = activationBySoftmax(action_space_prob) if len(legal_next_states) > 1 else [1.0]
-        # highest_prob_action_space = np.random.choice(legal_next_states, p=normalized_action_space_prob)
+        highest_prob = max(action_space_prob)
+        index_highest_prob = np.where(action_space_prob == highest_prob)[0]
+        index = index_highest_prob[0]
+        highest_prob_action_space = legal_next_states[index]
         return highest_prob_action_space
 
     def get_action_space(self, eps, state, legal_next_states, microhub_counter_env):
@@ -374,7 +452,7 @@ class PolicyManager:
             discount = 0.95
             for k in range(t, len(reward_memory)):
                 G_sum += reward_memory[k] * discount
-                discount *= gamma
+                #discount *= gamma
             G_t[t] = G_sum
         return G_t
 

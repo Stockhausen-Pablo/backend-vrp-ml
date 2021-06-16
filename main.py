@@ -109,11 +109,15 @@ def main(args):
         # AGENT
         agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=2000)
+                         num_episodes=200)
 
         # --------------------
         # TRAINING RESULTS
-        episodeStatistics, policy_action_space = agent.train_model()
+        episodeStatistics, policy_action_space, best_policy_reward, last_policy_reward = agent.train_model()
+
+        print("----------------------------------------")
+        print("Best_policy_reward: ", best_policy_reward)
+        print("Final_policy_reward: ", last_policy_reward)
 
         # --------------------
         # PLOTTING TRAINING RESULTS

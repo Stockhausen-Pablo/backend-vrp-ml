@@ -33,6 +33,20 @@ def activationBySoftmax(X):
     y = np.sum(z)
     return z / y
 
+def softmaxDict(X):
+    toSoftmaxSeries = X.copy()
+    for state_hash, prob in toSoftmaxSeries.items():
+        toSoftmaxSeries[state_hash] = prob
+    z = np.exp(np.array((toSoftmaxSeries - max(toSoftmaxSeries)), float))
+    y = np.sum(z)
+    softmax_arr = z / y
+    softmax_dict = dict()
+    counter = 0
+    for state_hash, prob in X.items():
+        softmax_dict[state_hash] = softmax_arr[counter]
+        counter += 1
+    return softmax_dict
+
 def softmax(X, theta=1.0, axis=None):
     """
     Compute the softmax of each element along an axis of X.

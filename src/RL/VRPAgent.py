@@ -11,9 +11,11 @@ class VRPAgent:
     Agent is set to Off-Policy behaviour / Since one full trajectory must be completed to construct a sample space
     """
 
-    EpisodeStats = namedtuple("Stats", ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR", "episode_policy_reward"])
+    EpisodeStats = namedtuple("Stats",
+                              ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR",
+                               "episode_policy_reward"])
 
-    def __init__(self, env, policyManager, num_episodes, alpha=0.5, gamma=0.95, eps=0.05):
+    def __init__(self, env, policyManager, num_episodes, alpha=0.5, gamma=0.95, eps=0.15):
         self.env = env
         self.policyManager = policyManager
         self.num_episodes = num_episodes
@@ -50,8 +52,15 @@ class VRPAgent:
     def train_model(self):
         for epoch in range(self.num_episodes):
             self.runEpisode(epoch)
-            G_t, J_avR, loseHistory, eps, policy_reward = self.policyManager.policy_update_by_learning(self.env, self.episode, self.episode_statistics.episode_rewards[epoch], self.gamma, self.max_steps, self.num_episodes, epoch)
 
+            G_t, J_avR, loseHistory, eps, policy_reward = self.policyManager.policy_update_by_learning(self.env,
+                                                                                                       self.episode,
+                                                                                                       self.episode_statistics.episode_rewards[
+                                                                                                           epoch],
+                                                                                                       self.gamma,
+                                                                                                       self.max_steps,
+                                                                                                       self.num_episodes,
+                                                                                                       epoch)
 
             # Update Metainformation
             self.episode_statistics.episode_G_t[epoch] = sum(G_t)
@@ -61,9 +70,16 @@ class VRPAgent:
             self.eps = eps
             self.env.reset()
 
-        return self.episode_statistics, self.policyManager.policy_action_space
+        best_policy_reward = min(self.episode_statistics.episode_policy_reward)
+        last_policy_reward = self.episode_statistics.episode_policy_reward[len(self.episode_statistics.episode_policy_reward)-1]
 
-    def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states, possible_next_states_hub_ignored,
+        return self.episode_statistics, \
+               self.policyManager.policy_action_space, \
+               best_policy_reward,\
+               last_policy_reward
+
+    def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states,
+               possible_next_states_hub_ignored,
                possible_rewards, microhub_counter):
         return self.episode.append(
             self.Transition(
@@ -74,7 +90,7 @@ class VRPAgent:
                 next_state=next_state,
                 done=done,
                 possible_next_states=possible_next_states,
-                possible_next_states_hub_ignored = possible_next_states_hub_ignored,
+                possible_next_states_hub_ignored=possible_next_states_hub_ignored,
                 possible_rewards=possible_rewards,
                 microhub_counter=microhub_counter
             )
@@ -100,11 +116,14 @@ class VRPAgent:
             # LEGAL NEXT STATES
             # given by the environment
             legal_next_action, legal_next_states, legal_next_states_hubs_ignored, microhub_counter = self.getLegalAction()
-            possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier, legal_next_states if legal_next_action == 1 else [self.env.get_microhub_hash()])
+            possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier,
+                                                              legal_next_states if legal_next_action == 1 else [
+                                                                  self.env.get_microhub_hash()])
 
             # --------------------
             # CHOOSE ACTION SPACE
-            action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states, microhub_counter)
+            action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states,
+                                                                                  microhub_counter)
 
             # --------------------
             # DO STEP IN ENVIRONMENT
@@ -114,7 +133,8 @@ class VRPAgent:
 
             # --------------------
             # SAVE TRANSITION
-            self.update(state, legal_next_action, action_space_prob, reward, next_state, done, legal_next_states, legal_next_states_hubs_ignored,
+            self.update(state, legal_next_action, action_space_prob, reward, next_state, done, legal_next_states,
+                        legal_next_states_hubs_ignored,
                         possible_rewards, microhub_counter)
 
             # --------------------
