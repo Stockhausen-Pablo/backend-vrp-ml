@@ -25,6 +25,20 @@ def loadStopData(dataSet):
 
 def main(args):
     # --------------------
+    # ARGSPARSE
+    # define parameters
+    learning_rate = args['learning_rate']
+    discount_factor = args['discount_factor']
+    exploration_factor = args['exploration_factor']
+    num_episodes = args['num_episodes']
+    # aco settings
+    aco_alpha_factor = args['aco_alpha_factor']
+    aco_beta_factor = args['aco_beta_factor']
+    pheromone_evaporation_coefficient = args['pheromone_evaporation_coefficient']
+    pheromone_constant = args['pheromone_constant']
+    aco_iterations = args['aco_iterations']
+
+    # --------------------
     # INPUT
     # define meta data
     print("---------System menu---------")
@@ -62,11 +76,11 @@ def main(args):
             vehicleWeight=capacityWeight,
             vehicleVolume=capacityVolume,
             vehicleCount=amountVehicles,
-            discountAlpha=.5,
-            discountBeta=1.2,
-            pheromone_evaporation_coefficient=.40,
-            pheromone_constant=1.0,
-            iterations=80
+            discountAlpha=aco_alpha_factor,
+            discountBeta=aco_beta_factor,
+            pheromone_evaporation_coefficient=pheromone_evaporation_coefficient,
+            pheromone_constant=pheromone_constant,
+            iterations=aco_iterations
         )
 
         # --------------------
@@ -103,13 +117,18 @@ def main(args):
 
         # --------------------
         # POLICY NETWORK
-        policyManager = PolicyManager(environment.getStateHashes(), environment.actions, normalized_probability_Matrix)
+        policyManager = PolicyManager(environment.getStateHashes(),
+                                      normalized_probability_Matrix,
+                                      learning_rate,
+                                      discount_factor,
+                                      exploration_factor
+                                      )
 
         # --------------------
         # AGENT
         agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=200)
+                         num_episodes=num_episodes)
 
         # --------------------
         # TRAINING RESULTS

@@ -17,120 +17,45 @@ def clip_weight(current_weight, clipValue):
 
 
 class PolicyManager:
-    def __init__(self, state_hashes, actions, aco_boost_probability_Matrix, discountFactor=0.95, theta=0.00001):
+    def __init__(self, state_hashes, aco_boost_probability_Matrix, learning_rate, discountFactor, exploration_rate, theta=0.00001):
+        # --------------------
+        # STATES / ACTIONS
         self.state_hashes = state_hashes
+        self.microhub_hash = state_hashes[0]
+        self.microhub_counter = 0
+
+        # --------------------
+        # MODEL-PARAMETER
         self.discountFactor = discountFactor
-        self.learning_rate = 2**-3
+        self.learning_rate = learning_rate
+        self.eps = exploration_rate
+
+        # --------------------
+        # CONTROL-PARAMETER
         self.learning_rate_decay = 0.1
-        self.eps = 0.05
         self.increasing_factor = 0.95
         self.decreasing_factor = 1.05
         self.decrease_overall = False
         self.theta = float(theta)
         self.penultimate_reward = 0.0
-        self.microhub_hash = state_hashes[0]
-        self.G = 0  # advantanges
-        self.microhub_counter = 0
+
+        # --------------------
+        # MODEL-CONTEXT SPECIFIC
+        self.G = 0
         self.baseline_estimate = np.zeros_like(state_hashes, dtype=np.float32)
-        # Initialize a random start policy
-        # shows the distribution of a state over the action space per row
-        # self.policy_action_space = aco_boost_probability_Matrix
+
+        # --------------------
+        # PARAMETERIZED POLICY
         self.policy_action_space = pd.DataFrame(index=state_hashes[1:], columns=state_hashes[1:])
         new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
         self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
         self.policy_action_space['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.0
         self.policy_action_space.fillna(value=0.0, inplace=True)
         self.policy_action_space = self.policy_action_space + (1 / len(state_hashes))
-        self.policy_action = pd.DataFrame(index=state_hashes, columns=[actions])
-        self.policy_action.fillna(value=0.0, inplace=True)
-        self.policy_action = self.policy_action + (1 / len(actions))
-
-    def policy_eval(self, env, policy, values, gamma=0.9, theta=0.01):
-        microhubCounter = 0
-        microhubId = env.getMicrohubId()
-        while True:
-            delta = 0.0
-            old_values = np.copy(values)
-            for s in env.states:
-                v = np.zeros_like(env.states, dtype=np.float32)
-                if (s.hashIdentifier == microhubId):
-                    possibleStates = policy.at['{}/{}'.format(s.hashIdentifier, microhubCounter), "possible_actions"]
-                else:
-                    possibleStates = policy.at[s.hashIdentifier, "possible_actions"]
-                for s_n in possibleStates:
-                    s_next = env.getStateByHash(s_n)
-                    pi_s_a = 1
-                    p = env.getTransitionProbability(s.hashIdentifier, s_next.hashIdentifier)
-                    r = env.reward_func(s, s_next)
-                    v[s_next.stopid] = pi_s_a * p * (r + gamma * values[s_next.stopid])
-
-                values[s.stopid] = np.sum(v)
-                delta = np.maximum(delta, np.absolute(values[s.stopid] - old_values[s.stopid]))
-
-            if delta < theta:
-                break
-        return values
-
-    def policy_improvement(self, q_values, episode):
-        for i, step_t in enumerate(episode):
-            argmax_q = -np.inf
-            best_a = None
-            q_actual = 0
-            s_q_values = self.get_qvalue(step_t.state.hashIdentifier, step_t.action)
-            test = s_q_values.index(max(s_q_values))
-            for s_n in step_t.possible_next_states:
-                test = 0
-
-    # def policy_improvement(self, values, env, policy, episode, gamma, discount_factor=1.0):
-    #     policy_stable = True
-    #     for s in env.states:
-    #         argmax_q = -np.inf
-    #         best_a = None
-    #         q_actual = 0
-    #         possibleStates = []
-    #         if (s.hashIdentifier == microhubId):
-    #             possibleStates = policy.at['{}/{}'.format(s.hashIdentifier, microhubCounter), "possible_actions"]
-    #         else:
-    #             possibleStates = policy.at[s.hashIdentifier, "possible_actions"]
-    #         for s_n in possibleStates:
-    #             s_next = env.getStateByHash(s_n)
-    #             p = env.getTransitionProbability(s.hashIdentifier, s_next.hashIdentifier)
-    #             r = env.reward_func(s, s_next)
-    #             q_actual += p * (r + gamma * values[s_next.stopid])
-    #
-    #             if q_actual > argmax_q:
-    #                 argmax_q = q_actual
-    #                 best_a = s_next.hashIdentifier
-    #
-    #         if s.hashIdentifier == microhubId:
-    #             if policy.at['{}/{}'.format(s.hashIdentifier, microhubCounter), "best_a"] != best_a:
-    #                 policy_stable = False
-    #             policy.at['{}/{}'.format(s.hashIdentifier, microhubCounter), "best_a"] = best_a
-    #             microhubCounter += 1
-    #         else:
-    #             if policy.at[s.hashIdentifier, "best_a"] != best_a:
-    #                 policy_stable = False
-    #             policy.at[s.hashIdentifier, "best_a"] = best_a
-    #
-    #     return policy_stable
-
-    # while True:
-    #     V = self.policy_eval(env, episode, numIterations=20)
-    #     policy_stable = True
-    #     for s in state_hashes:
-    #         chosen_a = policy[s].idxmax()
-    #         action_values = one_step_lookahead(s, V)
-    #         best_a = max(action_values, key=lambda key: action_values[key])
-    #         if chosen_a != best_a:
-    #             policy_stable = False
-    #         policy[s] = np.eye(env.nA)[best_a]
-    #     if policy_stable:
-    #         return policy, V
 
     def policy_update_by_learning(self, env, episode, episode_reward, gamma, max_steps, num_episodes, epoch):
         # --------------------
         # COPY OLD POLICY
-        policy_action_next = self.policy_action.copy()
         policy_action_space_copy = self.policy_action_space.copy()
         policy_action_stable = False
         policy_action_space_stable = False
@@ -161,15 +86,16 @@ class PolicyManager:
         print("Current_Episode_Reward: ", episode_reward)
 
         if episode_reward < old_policy_reward:
-            print("----------------------------------------------GOOD EPISODE----------------------------------------------------")
+            print(
+                "----------------------------------------------GOOD EPISODE----------------------------------------------------")
             self.increasing_factor = 0.7  # 0.92
-            self.decreasing_factor = 1.20 # 1.07
+            self.decreasing_factor = 1.20  # 1.07
             self.decrease_overall = True
         else:
             self.increasing_factor = 1.07
 
         for idx, g in enumerate(self.G):
-            print("------------------Step ",idx,"------------------")
+            print("------------------Step ", idx, "------------------")
             # --------------------
             # HANDLE MICROHUB PROBLEMATIC
             state_hash, next_state_hash = self.handle_multiple_tours(episode[idx].state, episode[idx].next_state,
@@ -193,27 +119,29 @@ class PolicyManager:
 
             # --------------------
             # ADVANTAGE / APPLY TEMPORAL DIFFERENCE ERROR
-            advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (g - baseline_estimate[episode[idx].state.stopid])
-            #advantage_estimate = g - baseline_estimate[episode[idx].state.stopid]
-            #advantage_estimate = g + ((self.discountFactor * baseline_estimate[episode[idx].next_state.stopid])-baseline_estimate[episode[idx].state.stopid])
+            # USES SIMPLE MONTE CARLO
+            advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
+                        g - baseline_estimate[episode[idx].state.stopid])
+            # advantage_estimate = g - baseline_estimate[episode[idx].state.stopid]
+            # advantage_estimate = g + ((self.discountFactor * baseline_estimate[episode[idx].next_state.stopid])-baseline_estimate[episode[idx].state.stopid])
             print("Current_g: ", g)
-            #print("test ", test)
+            # print("test ", test)
             print("Advantage_Estimate: ", advantage_estimate)
 
             # --------------------
             # CALCULATE LOSE/COST
-            #lose = self.custom_loss(current_weight, g, advantage_estimate)
-            #lose = self.cost(current_weight, g, advantage_estimate)
-            #loseHistory.append(lose)
-            #print("Current_lose: ", lose)
-            #gradients = self.grad(current_weight, g, advantage_estimate)
+            # lose = self.custom_loss(current_weight, g, advantage_estimate)
+            # lose = self.cost(current_weight, g, advantage_estimate)
+            # loseHistory.append(lose)
+            # print("Current_lose: ", lose)
+            # gradients = self.grad(current_weight, g, advantage_estimate)
 
             # --------------------
             # SETUP LEARNING RATE AND GAMMA_T
             lr = self.learning_rate
             print("Learning_rate: ", lr)
 
-            #gamma_t = self.discountFactor/(1 + self.learning_rate_decay * epoch)
+            # gamma_t = self.discountFactor/(1 + self.learning_rate_decay * epoch)
             gamma_t = self.discountFactor
             print("Gamma_t: ", gamma_t)
 
@@ -227,7 +155,6 @@ class PolicyManager:
             value_weight_new = clip_weight(value_weight_new, 0.0001)
             print("Current_value_weight_new: ", value_weight_new)
 
-
             # --------------------
             # DO STOCHASTIC GRADIENT STEP AND UPDATE PARAMETER OF POLICY
             gradient_step = lr * gamma_t * (advantage_estimate * np.log(value_weight_new))
@@ -235,7 +162,7 @@ class PolicyManager:
 
             updated_weight = current_weight - gradient_step
 
-            #updated_weight = lr * (lose/updated_weight)
+            # updated_weight = lr * (lose/updated_weight)
 
             print("Current_weight: ", round(current_weight, 5))
             print("Pre_updated__weight: ", round(updated_weight, 5))
@@ -247,22 +174,23 @@ class PolicyManager:
 
             if self.decrease_overall:
                 for state in episode[idx].possible_next_states:
-                    self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
+                    self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[
+                                                                         state_hash, state] ** self.decreasing_factor
 
             print("Updated_weight: ", round(updated_weight, 5))
 
             # --------------------
             # BACKPROPAGATION
             # Backpropagation mit Trägheitsterm fehlt
-            #grad_weight = -self.learning_rate * (lose / current_weight)
-            #weight_new = self.resolve_weight(grad_weight, current_weight, episode[idx].possible_rewards)
+            # grad_weight = -self.learning_rate * (lose / current_weight)
+            # weight_new = self.resolve_weight(grad_weight, current_weight, episode[idx].possible_rewards)
 
             # --------------------
             # SET UPDATED NEW WEIGHT
-            #if weight_new:
-                #if self.decrease_overall and weight_new > current_weight:
-                #    for state in episode[idx].possible_next_states:
-                #        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
+            # if weight_new:
+            # if self.decrease_overall and weight_new > current_weight:
+            #    for state in episode[idx].possible_next_states:
+            #        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
             self.policy_action_space.at[state_hash, next_state_hash] = round(updated_weight, 5)
 
         # --------------------
@@ -278,7 +206,7 @@ class PolicyManager:
         print("New_Policy_Reward: ", new_policy_reward)
         policy_relevant_reward = new_policy_reward
 
-        #if old_policy_reward < new_policy_reward:
+        # if old_policy_reward < new_policy_reward:
         #    self.policy_action_space = policy_action_space_copy
         #    policy_relevant_reward = old_policy_reward
 
@@ -295,7 +223,7 @@ class PolicyManager:
         self.increasing_factor = 0.95
         self.decreasing_factor = 1.05
         self.decrease_overall = False
-        #self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
+        # self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
         self.penultimate_reward = old_policy_reward
 
         # --------------------
@@ -344,12 +272,13 @@ class PolicyManager:
                     pi_s_a = 1
                     p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
                     r = env.reward_func_hash(s_a_stop.hashIdentifier, s_n)
-                    #v[s_next.stopid] = r + gamma * (p * self.baseline_estimate[s_next.stopid])
+                    # v[s_next.stopid] = r + gamma * (p * self.baseline_estimate[s_next.stopid])
                     v[s_next.stopid] = p * (r + gamma * self.baseline_estimate[s_next.stopid])
-                    #if (s_next.hashIdentifier == self.microhub_hash):
+                    # if (s_next.hashIdentifier == self.microhub_hash):
                     #    v[s_next.stopid] *= self.microhub_counter
                 self.baseline_estimate[s_a_stop.stopid] = np.sum(v)
-                delta = np.maximum(delta, np.absolute(old_values[s_a_stop.stopid]) - self.baseline_estimate[s_a_stop.stopid])
+                delta = np.maximum(delta,
+                                   np.absolute(old_values[s_a_stop.stopid]) - self.baseline_estimate[s_a_stop.stopid])
             if delta < theta:
                 break
         return self.baseline_estimate
@@ -380,6 +309,7 @@ class PolicyManager:
         A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
         g = -1 * np.dot(A.T, X)
         return g
+
     # end
 
     def custom_loss(self, y_true, y_pred, advantages):  # objective function
@@ -421,17 +351,18 @@ class PolicyManager:
                     '{}/{}'.format(state.hashIdentifier, self.microhub_counter), legal_next_states].to_numpy()
             else:
                 action_space_prob = self.policy_action_space.loc[state.hashIdentifier, legal_next_states].to_numpy()
-            #softmax_space_prob = activationBySoftmax(action_space_prob) if len(legal_next_states) > 1 else [1.0]
+            # softmax_space_prob = activationBySoftmax(action_space_prob) if len(legal_next_states) > 1 else [1.0]
             normalized_action_space_prob = normalize_list(action_space_prob) if len(legal_next_states) > 1 else [1.0]
-            #highest_prob_action_space_nr = np.random.choice(len(legal_next_states), p=softmax_space_prob)
-            #highest_prob_action_space = legal_next_states[highest_prob_action_space_nr]
-            #highest_prob = softmax_space_prob[highest_prob_action_space_nr]
+            # highest_prob_action_space_nr = np.random.choice(len(legal_next_states), p=softmax_space_prob)
+            # highest_prob_action_space = legal_next_states[highest_prob_action_space_nr]
+            # highest_prob = softmax_space_prob[highest_prob_action_space_nr]
             highest_prob = max(normalized_action_space_prob)
             index_highest_prob = np.where(normalized_action_space_prob == highest_prob)[0]
             if len(index_highest_prob) > 1:
                 highest_prob_action_space = np.random.choice(legal_next_states, p=normalized_action_space_prob)
             else:
-                highest_prob_action_space = legal_next_states[index_highest_prob[0] if len(index_highest_prob) > 1 else 0]
+                highest_prob_action_space = legal_next_states[
+                    index_highest_prob[0] if len(index_highest_prob) > 1 else 0]
             return highest_prob_action_space, highest_prob
 
     def get_action(self, state):
@@ -452,7 +383,7 @@ class PolicyManager:
             discount = 0.95
             for k in range(t, len(reward_memory)):
                 G_sum += reward_memory[k] * discount
-                #discount *= gamma
+                # discount *= gamma
             G_t[t] = G_sum
         return G_t
 
