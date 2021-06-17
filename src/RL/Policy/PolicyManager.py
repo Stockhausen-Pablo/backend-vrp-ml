@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from src.Utils.helper import activationBySoftmax, normalize_list, softmaxDict
-import keras.backend as K
+import keras.backend as K # dont remove
 
 
 def clip_weight(current_weight, clipValue):
@@ -232,6 +232,7 @@ class PolicyManager:
 
     def construct_policy(self, policy, env, max_steps):
         policy_reward = 0.0
+        allTours=[]
         tour = []
         state = env.reset()
         tour.append(state)
@@ -240,13 +241,17 @@ class PolicyManager:
             action_space = self.get_action_space_by_policy(state, legal_next_states, policy, microhub_counter)
             next_state, reward, done, currentTour, currentTours = env.step(legal_next_action, action_space)
             policy_reward += reward
-            if done:
-                break
 
             state = next_state
             tour.append(state)
+            if legal_next_action == 0 or legal_next_action == 2:
+                allTours.append(tour)
+                tour = []
+                tour.append(state)
+            if done:
+                break
 
-        return policy_reward, tour
+        return policy_reward, allTours
 
     def handle_multiple_tours(self, state, next_state, microhub_counter):
         if state.hashIdentifier == self.microhub_hash:
@@ -309,7 +314,6 @@ class PolicyManager:
         A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
         g = -1 * np.dot(A.T, X)
         return g
-
     # end
 
     def custom_loss(self, y_true, y_pred, advantages):  # objective function
@@ -369,6 +373,9 @@ class PolicyManager:
         action_prob = self.policy_action.loc[state.hashIdentifier].to_numpy()
         highest_prob_action = np.random.choice(np.arange(len(action_prob)), p=action_prob)
         return highest_prob_action, action_prob[highest_prob_action]
+
+    def get_current_policy(self):
+        return self.policy_action_space
 
     def compute_G_t(self, reward_memory, gamma):
         """

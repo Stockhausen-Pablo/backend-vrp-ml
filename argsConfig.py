@@ -13,8 +13,11 @@ def getParams():
 
     # Training
     argsParser.add_argument('--train', default=True, action='store_true', help='entering training mode')
-    argsParser.add_argument('--num_episodes', default=200, type=int,
+    argsParser.add_argument('--num_episodes', default=10, type=int,
                             help="Define number of episodes for the training process")
+    argsParser.add_argument('--max_steps', default=10000, type=int,
+                            help="Define the number of maximal steps that can be taking for the training process")
+
     # Testing
     argsParser.add_argument('--test', default=False, action='store_false', help="entering test mode")
 
@@ -46,6 +49,6 @@ def getParams():
     args = vars(args)
 
     #output
-    print(' '.join(f'{k}={v}' for k, v in sorted(args.items())))
+    print(' '.join(f'{k}={v}\n' for k, v in sorted(args.items())))
 
     return args

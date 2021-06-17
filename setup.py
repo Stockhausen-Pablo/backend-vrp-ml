@@ -10,7 +10,7 @@ with open('LICENSE') as f:
 setup(
     name='vrp-rl',
     version='0.1.0',
-    description='Reinforcment Learning by using a Markov Decision process to solve VRP',
+    description='Reinforcment Learning by using a MDP/REINFORCE to solve CVRP',
     long_description=readme,
     author='Pablo Stockhausen',
     author_email='stockhap@th-brandenbug.de',

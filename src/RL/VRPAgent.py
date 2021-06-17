@@ -8,24 +8,24 @@ class VRPAgent:
     """
     REINFORCE (Monte Carlo Policy Gradient) Agent.
     Optimizes the policy function approximator using policy gradient.
-    Agent is set to Off-Policy behaviour / Since one full trajectory must be completed to construct a sample space
+    Agent is set to On-Policy behaviour / ( to delete -> Since one full trajectory must be completed to construct a sample space)
     """
 
     EpisodeStats = namedtuple("Stats",
                               ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR",
                                "episode_policy_reward"])
 
-    def __init__(self, env, policyManager, num_episodes, alpha=0.5, gamma=0.95, eps=0.15):
+    def __init__(self, env, policyManager, num_episodes, max_steps, discount_factor, eps=0.15):
+        # Given by main
         self.env = env
         self.policyManager = policyManager
         self.num_episodes = num_episodes
-        self.alpha = alpha
-        self.gamma = gamma
+        self.max_steps = max_steps
+        self.gamma = discount_factor
+
         self.eps = eps
 
         self.episode = []
-
-        self.max_steps = 10000
 
         self.Transition = collections.namedtuple("Transition",
                                                  ["state",

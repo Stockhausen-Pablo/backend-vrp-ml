@@ -9,7 +9,7 @@ from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
 from src.Utils import plotting
 from src.Utils.helper import normalize_df
-from src.Utils.plotter import plotCoordinates
+from src.Utils.plotter import plotCoordinatesWithCoordinatesLabel, plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
 
 
 def loadStopData(dataSet):
@@ -31,6 +31,7 @@ def main(args):
     discount_factor = args['discount_factor']
     exploration_factor = args['exploration_factor']
     num_episodes = args['num_episodes']
+    max_steps = args['max_steps']
     # aco settings
     aco_alpha_factor = args['aco_alpha_factor']
     aco_beta_factor = args['aco_beta_factor']
@@ -60,7 +61,8 @@ def main(args):
     # --------------------
     # PLOT COORDINATES
     # overview of problem space (input)
-    plotCoordinates()
+    plotCoordinatesWithCoordinatesLabel()
+    plotCoordinatesWithStopNrLabel()
 
     if args['train']:
         # --------------------TRAINING MODE--------------------
@@ -128,11 +130,15 @@ def main(args):
         # AGENT
         agent = VRPAgent(env=environment,
                          policyManager=policyManager,
-                         num_episodes=num_episodes)
+                         num_episodes=num_episodes,
+                         max_steps=max_steps,
+                         discount_factor=discount_factor
+                         )
 
         # --------------------
         # TRAINING RESULTS
         episodeStatistics, policy_action_space, best_policy_reward, last_policy_reward = agent.train_model()
+        current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(), environment, max_steps)
 
         print("----------------------------------------")
         print("Best_policy_reward: ", best_policy_reward)
@@ -141,6 +147,8 @@ def main(args):
         # --------------------
         # PLOTTING TRAINING RESULTS
         plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
+        plotTourWithStopNrLabel(final_tours)
+
 
         if args['test']:
             # --------------------TESTING MODE--------------------
