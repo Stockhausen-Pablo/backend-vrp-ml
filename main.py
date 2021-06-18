@@ -9,6 +9,7 @@ from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
 from src.Utils import plotting
 from src.Utils.helper import normalize_df
+from src.Utils.memoryLoader import create_model_name
 from src.Utils.plotter import plotCoordinatesWithCoordinatesLabel, plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
 
 
@@ -32,6 +33,7 @@ def main(args):
     exploration_factor = args['exploration_factor']
     num_episodes = args['num_episodes']
     max_steps = args['max_steps']
+    ml_agent = args['agent']
     # aco settings
     aco_alpha_factor = args['aco_alpha_factor']
     aco_beta_factor = args['aco_beta_factor']
@@ -45,9 +47,12 @@ def main(args):
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
     dataSet = input("Please specify the data source of the stops to be processed:")
-    amountVehicles = int(input("How many vehicles will be used:"))
-    capacityWeight = float(input("What is the maximum weight that the vehicle can carry:"))
-    capacityVolume = float(input("What is the maximum volume that the vehicle can hold:"))
+    print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
+    print('-The model of the agent is saved but also loaded based on the microhub names.-')
+    microhub_name = input("Please specify the microhub name:")
+    amount_vehicles = int(input("How many vehicles will be used:"))
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:"))
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:"))
 
     # --------------------
     # SETTING UP TOUR MANAGER
@@ -56,7 +61,7 @@ def main(args):
     loadStopData(dataSet)
 
     # Setup Distance Matrix for later use
-    distanceMatrix = tManager.getDistances()
+    distance_matrix = tManager.getDistances()
 
     # --------------------
     # PLOT COORDINATES
@@ -75,9 +80,9 @@ def main(args):
         antManager = AntManager(
             stops=tManager.getListOfStops(),
             start_stop=tManager.getStop(0),
-            vehicleWeight=capacityWeight,
-            vehicleVolume=capacityVolume,
-            vehicleCount=amountVehicles,
+            vehicleWeight=capacity_weight,
+            vehicleVolume=capacity_volume,
+            vehicleCount=amount_vehicles,
             discountAlpha=aco_alpha_factor,
             discountBeta=aco_beta_factor,
             pheromone_evaporation_coefficient=pheromone_evaporation_coefficient,
@@ -109,12 +114,12 @@ def main(args):
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
             probabilityMatrix=normalized_probability_Matrix,
-            distanceMatrix=distanceMatrix,
+            distanceMatrix=distance_matrix,
             microHub=tManager.getMicrohub(),
             capacityDemands=tManager.getCapacityDemands(),
-            vehicles=amountVehicles,
-            vehicleWeight=capacityWeight,
-            vehicleVolume=capacityVolume
+            vehicles=amount_vehicles,
+            vehicleWeight=capacity_weight,
+            vehicleVolume=capacity_volume
         )
 
         # --------------------
@@ -125,6 +130,11 @@ def main(args):
                                       discount_factor,
                                       exploration_factor
                                       )
+
+        # --------------------
+        # LOAD PREVIOUS ML-MODEL
+        model_name = create_model_name(microhub_name, capacity_weight, capacity_volume, ml_agent)
+        policyManager.loadModel(model_name)
 
         # --------------------
         # AGENT
@@ -149,10 +159,17 @@ def main(args):
         plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
         plotTourWithStopNrLabel(final_tours)
 
+        # --------------------
+        # SAVING TRAINING RESULTS
+        # w = weight
+        # v = volume
+        # a = agent
+        policyManager.saveModel(model_name)
+
 
         if args['test']:
             # --------------------TESTING MODE--------------------
-            print("Testig")
+            print("-Entered Testing Mode-")
 
 
 if __name__ == "__main__":

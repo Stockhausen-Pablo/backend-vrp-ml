@@ -77,7 +77,7 @@ def plotTourWithStopNrLabel(tours):
         tourid += 1
 
     rows = [mpatches.Patch(color=tourColor) for tourColor in colorsForLegend]
-    textLabel = ['tour {}'.format(i) for i in range(len(tours))]
+    textLabel = ['tour {}'.format(i+1) for i in range(len(tours))]
 
     plt.legend(rows,
                textLabel,

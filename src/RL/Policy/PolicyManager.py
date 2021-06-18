@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 
 from src.Utils.helper import activationBySoftmax, normalize_list, softmaxDict
-import keras.backend as K # dont remove
+from src.Utils.memoryLoader import load_memory_df_from_local, save_memory_df_to_local
+import keras.backend as K  # dont remove
 
 
 def clip_weight(current_weight, clipValue):
@@ -17,7 +18,8 @@ def clip_weight(current_weight, clipValue):
 
 
 class PolicyManager:
-    def __init__(self, state_hashes, aco_boost_probability_Matrix, learning_rate, discountFactor, exploration_rate, theta=0.00001):
+    def __init__(self, state_hashes, aco_boost_probability_Matrix, learning_rate, discountFactor, exploration_rate,
+                 theta=0.00001):
         # --------------------
         # STATES / ACTIONS
         self.state_hashes = state_hashes
@@ -42,16 +44,12 @@ class PolicyManager:
         # --------------------
         # MODEL-CONTEXT SPECIFIC
         self.G = 0
+        self.old_policy_reward = 10000000
         self.baseline_estimate = np.zeros_like(state_hashes, dtype=np.float32)
 
         # --------------------
         # PARAMETERIZED POLICY
-        self.policy_action_space = pd.DataFrame(index=state_hashes[1:], columns=state_hashes[1:])
-        new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
-        self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
-        self.policy_action_space['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.0
-        self.policy_action_space.fillna(value=0.0, inplace=True)
-        self.policy_action_space = self.policy_action_space + (1 / len(state_hashes))
+        self.policy_action_space = pd.DataFrame()
 
     def policy_update_by_learning(self, env, episode, episode_reward, gamma, max_steps, num_episodes, epoch):
         # --------------------
@@ -78,14 +76,13 @@ class PolicyManager:
         # --------------------
         # COMPARE OLD POLICY REWARD TO EPISODE REWARD
         # increase probability factor when current episode reward > old policy reward
-        old_policy_reward, old_tour = self.construct_policy(policy_action_space_copy, env, max_steps)
         print("------------------Comparison------------------")
         print("--------Old_Policy-vs-Current_Episode---------")
         print("Epoch: ", epoch)
-        print("Old_Policy_Reward: ", old_policy_reward)
+        print("Old_Policy_Reward: ", self.old_policy_reward)
         print("Current_Episode_Reward: ", episode_reward)
 
-        if episode_reward < old_policy_reward:
+        if episode_reward < self.old_policy_reward:
             print(
                 "----------------------------------------------GOOD EPISODE----------------------------------------------------")
             self.increasing_factor = 0.7  # 0.92
@@ -121,7 +118,7 @@ class PolicyManager:
             # ADVANTAGE / APPLY TEMPORAL DIFFERENCE ERROR
             # USES SIMPLE MONTE CARLO
             advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
-                        g - baseline_estimate[episode[idx].state.stopid])
+                    g - baseline_estimate[episode[idx].state.stopid])
             # advantage_estimate = g - baseline_estimate[episode[idx].state.stopid]
             # advantage_estimate = g + ((self.discountFactor * baseline_estimate[episode[idx].next_state.stopid])-baseline_estimate[episode[idx].state.stopid])
             print("Current_g: ", g)
@@ -160,24 +157,25 @@ class PolicyManager:
             gradient_step = lr * gamma_t * (advantage_estimate * np.log(value_weight_new))
             print("Gradient_step: ", gradient_step)
 
+            # --------------------
+            # APPLY MONTE-CARLO
             updated_weight = current_weight - gradient_step
-
-            # updated_weight = lr * (lose/updated_weight)
-
             print("Current_weight: ", round(current_weight, 5))
             print("Pre_updated__weight: ", round(updated_weight, 5))
 
+            # --------------------
+            # APPLY PROBABILITY IN-/DECREASING FACTOR
             if updated_weight > current_weight:
                 updated_weight = current_weight ** self.increasing_factor
             if updated_weight < current_weight:
                 updated_weight = current_weight ** self.decreasing_factor
 
+            # --------------------
+            # REDUCE ALTERNATIVE ACTION EVALUATIONS
             if self.decrease_overall:
                 for state in episode[idx].possible_next_states:
                     self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[
                                                                          state_hash, state] ** self.decreasing_factor
-
-            print("Updated_weight: ", round(updated_weight, 5))
 
             # --------------------
             # BACKPROPAGATION
@@ -187,10 +185,7 @@ class PolicyManager:
 
             # --------------------
             # SET UPDATED NEW WEIGHT
-            # if weight_new:
-            # if self.decrease_overall and weight_new > current_weight:
-            #    for state in episode[idx].possible_next_states:
-            #        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[state_hash, state] ** self.decreasing_factor
+            print("Updated_weight: ", round(updated_weight, 5))
             self.policy_action_space.at[state_hash, next_state_hash] = round(updated_weight, 5)
 
         # --------------------
@@ -214,7 +209,7 @@ class PolicyManager:
         # EVALUATE INCREASING EPSILON
         # IF REWARD WAS STABLE OVER 3 TIMESTEPS, increase epsilon
         eps = self.eps
-        if (self.penultimate_reward == old_policy_reward == new_policy_reward) and epoch < (0.7 * num_episodes):
+        if (self.penultimate_reward == self.old_policy_reward == new_policy_reward) and epoch < (0.7 * num_episodes):
             print("Increased exploration chance")
             eps = self.eps ** 0.5
 
@@ -224,7 +219,8 @@ class PolicyManager:
         self.decreasing_factor = 1.05
         self.decrease_overall = False
         # self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
-        self.penultimate_reward = old_policy_reward
+        self.penultimate_reward = self.old_policy_reward
+        self.old_policy_reward = new_policy_reward
 
         # --------------------
         # RETURN
@@ -232,7 +228,7 @@ class PolicyManager:
 
     def construct_policy(self, policy, env, max_steps):
         policy_reward = 0.0
-        allTours=[]
+        allTours = []
         tour = []
         state = env.reset()
         tour.append(state)
@@ -298,23 +294,21 @@ class PolicyManager:
             weight_new = current_weight ** self.decreasing_factor  # try to decrease probability by 5%
         return weight_new
 
-    # Alternative Logistic Model
-    def sigmoid(self, z):
+    def sigmoidActivation(self, z):
         return 1 / (1 + np.exp(-z))
 
-    def hx(self, W, X):
-        return self.sigmoid(np.dot(X, W))
+    def dotProduct(self, W, X):
+        return self.sigmoidActivation(np.dot(X, W))
 
-    def cost(self, W, X, Y):
-        y_pred = self.hx(W, X)
+    def calculateCost(self, W, X, Y):
+        y_pred = self.dotProduct(W, X)
         return -1 * (Y * np.log(y_pred) + (1 - Y) * np.log(1 - y_pred))
 
-    def grad(self, W, X, Y):
-        y_pred = self.hx(W, X)
+    def calculateGradient(self, W, X, Y):
+        y_pred = self.dotProduct(W, X)
         A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
         g = -1 * np.dot(A.T, X)
         return g
-    # end
 
     def custom_loss(self, y_true, y_pred, advantages):  # objective function
         log_lik = y_true * K.log(y_pred)
@@ -387,9 +381,8 @@ class PolicyManager:
         G_t = np.zeros_like(reward_memory)
         for t in range(len(reward_memory)):
             G_sum = 0
-            discount = 0.95
             for k in range(t, len(reward_memory)):
-                G_sum += reward_memory[k] * discount
+                G_sum += reward_memory[k] * self.discountFactor
                 # discount *= gamma
             G_t[t] = G_sum
         return G_t
@@ -401,3 +394,10 @@ class PolicyManager:
         purpose to measure the quality of a policy pi
         """
         return np.mean(G_t)
+
+    def saveModel(self, model_name):
+        save_memory_df_to_local('./model/' + model_name + '.pkl', self.policy_action_space)
+
+    def loadModel(self, model_name):
+        loaded_model = load_memory_df_from_local('./model/' + model_name + '.pkl', self.state_hashes, self.microhub_hash)
+        self.policy_action_space = loaded_model
