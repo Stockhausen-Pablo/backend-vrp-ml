@@ -7,10 +7,9 @@ from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.Policy.PolicyManager import PolicyManager
 from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
-from src.Utils import plotting
 from src.Utils.helper import normalize_df
 from src.Utils.memoryLoader import create_model_name
-from src.Utils.plotter import plotCoordinatesWithCoordinatesLabel, plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
+from src.Utils.plotter import plot_episode_stats, plot_baseline_estimate, plotCoordinatesWithCoordinatesLabel, plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
 
 
 def loadStopData(dataSet):
@@ -156,8 +155,10 @@ def main(args):
 
         # --------------------
         # PLOTTING TRAINING RESULTS
-        plotting.plot_episode_stats(episodeStatistics, smoothing_window=25)
+        plot_episode_stats(episodeStatistics, smoothing_window=25)
         plotTourWithStopNrLabel(final_tours)
+        current_baseline = policyManager.get_current_baseline_as_dict()
+        plot_baseline_estimate(current_baseline)
 
         # --------------------
         # SAVING TRAINING RESULTS

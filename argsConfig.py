@@ -1,6 +1,7 @@
 # Import the argparse library
 import argparse
 
+
 def getParams():
     # Creating the parser
     argsParser = argparse.ArgumentParser(
@@ -13,7 +14,7 @@ def getParams():
 
     # Training
     argsParser.add_argument('--train', default=True, action='store_true', help='entering training mode')
-    argsParser.add_argument('--num_episodes', default=10, type=int,
+    argsParser.add_argument('--num_episodes', default=100, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")

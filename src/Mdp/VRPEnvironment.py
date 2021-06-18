@@ -76,14 +76,6 @@ class VRPEnvironment:
         self.resetTour()
         return next_state, reward, self.done, self.current_tour, self.allTours
 
-    def predict(self, state_i, legalActions):
-        listPredictions = []
-        for state_j in self.probabilityMatrix:
-            if state_j in legalActions:
-                prediction = self.probabilityMatrix.at[state_i.hashIdentifier, state_j]
-                listPredictions.append(prediction)
-        return listPredictions
-
     def resetPossibleStops(self):
         copyStates = self.states.copy()
         copyStates.remove(self.microHub)
@@ -116,9 +108,6 @@ class VRPEnvironment:
 
     def reward_func_hash(self, current_stop, next_stop):
         return self.distanceMatrix.at[current_stop, next_stop]
-
-    def getTransitionProbability(self, stop_i_hash, stop_j_hash):
-        return self.probabilityMatrix.at[stop_i_hash, stop_j_hash]
 
     def getCapacityDemandOfStop(self, stop_hash):
         return list(self.capacityDemands[stop_hash].values())

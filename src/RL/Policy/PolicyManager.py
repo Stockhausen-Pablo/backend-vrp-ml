@@ -371,6 +371,12 @@ class PolicyManager:
     def get_current_policy(self):
         return self.policy_action_space
 
+    def get_current_baseline_as_dict(self):
+        baseline_dict = dict()
+        for state_hash, baseline_value in zip(self.state_hashes, self.baseline_estimate):
+            baseline_dict[state_hash] = baseline_value
+        return baseline_dict
+
     def compute_G_t(self, reward_memory, gamma):
         """
         args
