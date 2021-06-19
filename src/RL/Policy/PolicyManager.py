@@ -18,7 +18,7 @@ def clip_weight(current_weight, clipValue):
 
 
 class PolicyManager:
-    def __init__(self, state_hashes, aco_boost_probability_Matrix, learning_rate, discountFactor, exploration_rate,
+    def __init__(self, state_hashes, learning_rate, discountFactor, exploration_rate,
                  theta=0.00001):
         # --------------------
         # STATES / ACTIONS
@@ -400,6 +400,17 @@ class PolicyManager:
         purpose to measure the quality of a policy pi
         """
         return np.mean(G_t)
+
+    def apply_aco_on_policy(self, increasing_factor, aco_probability_matrix):
+        for index, row in aco_probability_matrix.iterrows():
+            for state, aco_probability in row.items():
+                if state not in self.policy_action_space.index.values:
+                    new_row = pd.Series(name=state)
+                    self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
+                    self.policy_action_space[state] = 0.0
+                    self.policy_action_space.fillna(value=0.0, inplace=True)
+                if aco_probability > 0.00:
+                    self.policy_action_space.at[index, state] = self.policy_action_space.at[index, state] ** increasing_factor
 
     def saveModel(self, model_name):
         save_memory_df_to_local('./model/' + model_name + '.pkl', self.policy_action_space)

@@ -22,8 +22,11 @@ class AntManager:
 
         # Initializing nodes
         self.nodes = stops
+        self.state_hashes = [node.hashIdentifier for node in self.nodes]
         self.nodes_amount = len(stops)
         self.start_stop = 0 if start_stop is None else start_stop
+        self.microhub_hash = self.start_stop.hashIdentifier
+        self.microhub_counter = 0
 
         self.firstInit = True
 
@@ -69,14 +72,18 @@ class AntManager:
                          self.discountAlpha, self.discountBeta, self.pheromone_evaporation_coefficient, firstInit=False)
 
     def setup_antProbabilyMatrix(self):
-        df_new_antProbabilyMatrix = pd.DataFrame(index=[node.hashIdentifier for node in self.nodes],
-                                              columns=[node.hashIdentifier for node in self.nodes])
+        df_new_antProbabilyMatrix = pd.DataFrame(index=self.state_hashes[1:], columns=self.state_hashes[1:])
+        new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, 0))
+        df_new_pickle = df_new_antProbabilyMatrix.append(new_row, ignore_index=False)
+        df_new_pickle['{}/{}'.format(self.microhub_hash, 0)] = 0.0
         df_new_antProbabilyMatrix.fillna(value=0.0, inplace=True)
         return df_new_antProbabilyMatrix
 
     def setup_pheromoneMatrix(self):
-        df_new_pheromoneMatrix = pd.DataFrame(index=[node.hashIdentifier for node in self.nodes],
-                                              columns=[node.hashIdentifier for node in self.nodes])
+        df_new_pheromoneMatrix = pd.DataFrame(index=self.state_hashes[1:], columns=self.state_hashes[1:])
+        new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, 0))
+        df_new_pheromoneMatrix = df_new_pheromoneMatrix.append(new_row, ignore_index=False)
+        df_new_pheromoneMatrix['{}/{}'.format(self.microhub_hash, 0)] = 0.0
         df_new_pheromoneMatrix.fillna(value=0.0, inplace=True)
         return df_new_pheromoneMatrix
 
@@ -94,13 +101,30 @@ class AntManager:
                 sum_all_probabilities += (tau_i_j * eta_i_j)
             break
 
-        for i in self.ant_probability_Matrix:
-            for j in self.ant_probability_Matrix:
+        for i in self.df_pheromoneMatrix:
+            self.microhub_counter = 0
+            for j in self.df_pheromoneMatrix:
+                if i not in self.ant_probability_Matrix.index.values:
+                    new_row = pd.Series(name=j)
+                    self.ant_probability_Matrix = self.ant_probability_Matrix.append(new_row, ignore_index=False)
+                    self.ant_probability_Matrix[j] = 0.0
+                    self.ant_probability_Matrix.fillna(value=0.0, inplace=True)
+                if j not in self.ant_probability_Matrix.index.values:
+                    new_row = pd.Series(name=j)
+                    self.ant_probability_Matrix = self.ant_probability_Matrix.append(new_row, ignore_index=False)
+                    self.ant_probability_Matrix[j] = 0.0
+                    self.ant_probability_Matrix.fillna(value=0.0, inplace=True)
                 # (\tau_{i,j})^\alpha
                 tau_i_j = self.df_pheromoneMatrix.at[i, j]
                 # (\eta_{i,j})}^\beta
-                stop_row = next((node for node in self.nodes if node.hashIdentifier == i), None)
-                stop_col = next((node for node in self.nodes if node.hashIdentifier == j), None)
+                i_hashComparer = i
+                j_hashComparer = j
+                if "/" in str(i_hashComparer):
+                    i_hashComparer = self.microhub_hash
+                if "/" in str(j_hashComparer):
+                    j_hashComparer = self.microhub_hash
+                stop_row = next((node for node in self.nodes if node.hashIdentifier == i_hashComparer), None)
+                stop_col = next((node for node in self.nodes if node.hashIdentifier == j_hashComparer), None)
                 eta_i_j = tManager.getDistanceByMatrix(stop_row.hashIdentifier, stop_col.hashIdentifier)
                 # calculate Probability
                 probability_i_j = float(((tau_i_j * eta_i_j) / sum_all_probabilities))
@@ -108,10 +132,22 @@ class AntManager:
                 self.ant_probability_Matrix.at[i, j] = float(probability_i_j)
 
     def updatePheromoneMatrix(self):
-        for df_start in self.df_pheromoneMatrix:
-            for df_end in self.df_pheromoneMatrix:
+        for df_start in self.df_updated_pheromoneMatrix:
+            self.microhub_counter = 0
+            for df_end in self.df_updated_pheromoneMatrix:
+                microhubExists = False
+
+                if df_end not in self.df_pheromoneMatrix.index.values:
+                    new_row = pd.Series(name=df_end)
+                    self.df_pheromoneMatrix = self.df_pheromoneMatrix.append(new_row, ignore_index=False)
+                    self.df_pheromoneMatrix[df_end] = 0.0
+                    self.df_pheromoneMatrix.fillna(value=0.0, inplace=True)
+
                 self.df_pheromoneMatrix.at[df_start, df_end] *= (1 - self.pheromone_evaporation_coefficient)
                 self.df_pheromoneMatrix.at[df_start, df_end] += self.df_updated_pheromoneMatrix.at[df_start, df_end]
+
+                if microhubExists:
+                    self.microhub_counter += 1
 
     def invalid_updatePheromoneMatrix(self):
         for start in range(len(self.pheromoneMatrix)):
@@ -121,8 +157,10 @@ class AntManager:
 
     def updatePheromoneMatrixByAnt(self, ant):
         tours = ant.getTours()
+        self.microhub_counter = 0
         for tour in tours:
             for index, stop in enumerate(tour):
+                microhubExists = False
                 stop_b = 0
                 if index == len(tour) - 1:
                     break
@@ -130,9 +168,30 @@ class AntManager:
                 else:
                     stop_b = tour[index + 1]
 
+                stop_hash = stop.hashIdentifier
+                stop_b_hash = stop_b.hashIdentifier
+
+                if stop_hash == self.microhub_hash:
+                    stop_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
+                if stop_b_hash == self.microhub_hash:
+                    self.microhub_counter += 1
+                    stop_b_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
+                    microhubExists = True
+
                 new_pheromoneValue = float(self.pheromone_constant / ant.get_travelled_Distance())  # 1/Total Length
-                self.df_updated_pheromoneMatrix.at[stop.hashIdentifier, stop_b.hashIdentifier] += new_pheromoneValue
-                self.df_updated_pheromoneMatrix.at[stop_b.hashIdentifier, stop.hashIdentifier] += new_pheromoneValue
+
+                if microhubExists:
+                    if ('{}/{}'.format(self.microhub_hash,
+                                       self.microhub_counter) not in self.df_updated_pheromoneMatrix.index.values):
+                        new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
+                        self.df_updated_pheromoneMatrix = self.df_updated_pheromoneMatrix.append(new_row, ignore_index=False)
+                        self.df_updated_pheromoneMatrix['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.0
+                        self.df_updated_pheromoneMatrix.fillna(value=0.0, inplace=True)
+                    self.df_updated_pheromoneMatrix.at[stop_hash, stop_b_hash] += new_pheromoneValue
+                    self.df_updated_pheromoneMatrix.at[stop_b_hash, stop_hash] += new_pheromoneValue
+                else:
+                    self.df_updated_pheromoneMatrix.at[stop_hash, stop_b_hash] += new_pheromoneValue
+                    self.df_updated_pheromoneMatrix.at[stop_b_hash, stop_hash] += new_pheromoneValue
                 # self.updated_pheromoneMatrix[stop.stopid][stop_b.stopid] += new_pheromoneValue
                 # self.updated_pheromoneMatrix[stop_b.stopid][stop.stopid] += new_pheromoneValue
 

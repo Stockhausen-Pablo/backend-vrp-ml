@@ -33,6 +33,7 @@ def activationBySoftmax(X):
     y = np.sum(z)
     return z / y
 
+
 def softmaxDict(X):
     toSoftmaxSeries = X.copy()
     for state_hash, prob in toSoftmaxSeries.items():
@@ -46,6 +47,7 @@ def softmaxDict(X):
         softmax_dict[state_hash] = softmax_arr[counter]
         counter += 1
     return softmax_dict
+
 
 def softmax(X, theta=1.0, axis=None):
     """

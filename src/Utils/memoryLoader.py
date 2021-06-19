@@ -38,5 +38,5 @@ def save_memory_df_to_local(pickleName, df_source):
     df_source.to_pickle(pickleName)
 
 
-def create_model_name(microhub_name, capacity_weight, capacity_volume, ml_agent):
-    return microhub_name + '_w_' + str(capacity_weight) + '_v_' + str(capacity_volume) + '_a_' + str(ml_agent)
+def create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name, ml_agent):
+    return microhub_name + '_w_' + str(capacity_weight) + '_v_' + str(capacity_volume) + '_s_'+ shipper_name + '_c_' + carrier_name + '_a_' + str(ml_agent)

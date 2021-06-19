@@ -16,6 +16,7 @@ class Ant:
                  pheromone_evaporation_coefficient,
                  firstInit=False):
         self.start_stop = start_stop
+        self.microhub_hash = self.start_stop.hashIdentifier
         self.possibleStops = possibleStops
         self.current_stop = current_stop
         self.antWeight = antWeight
@@ -28,6 +29,7 @@ class Ant:
         self.tourVolume = 0.0
         self.tour_complete = False
         self.distance_travelled = 0.0  # kilometers
+        self.microhub_counter = 0
         self.discountAlpha = discountAlpha
         self.discountBeta = discountBeta
         self.df_pheromoneMatrix = df_pheromoneMatrix
@@ -73,6 +75,7 @@ class Ant:
                     self.possibleStops.remove(next_stop)
                     self.tourOverloaded += 1
         self.possibleStops.append(self.start_stop)
+        self.microhub_counter += 1
         self.traverseAnt(self.current_stop, self.start_stop)
         self.allTours.append(self.tour)
         self.tour_complete = True
@@ -90,7 +93,13 @@ class Ant:
         total_attraction = 0.0
 
         for possible_next_stop in self.possibleStops:
-            df_pheromoneValue = self.df_pheromoneMatrix.at[self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier].astype(float)
+            current_hash = self.current_stop.hashIdentifier
+            next_hash = possible_next_stop.hashIdentifier
+            if current_hash == self.microhub_hash:
+                current_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
+            if next_hash == self.microhub_hash:
+                next_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
+            df_pheromoneValue = self.df_pheromoneMatrix.at[current_hash, next_hash].astype(float)
             # pheromoneValue = self.pheromoneMatrix[self.current_stop.stopid][possible_next_stop.stopid]
             # self.pheromoneMatrix[self.current_stop.stopid][self.current_stop.stopid] = 0.0
             distance = float(tManager.getDistanceByMatrix(self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier))
@@ -136,6 +145,7 @@ class Ant:
         self.current_stop = endStop
 
     def startNewTour(self, microHub, temp_stops):
+        self.microhub_counter += 1
         self.tour.append(microHub)
         self.allTours.append(self.tour.copy())
         self.updateDistanceTravelled(self.current_stop, microHub)

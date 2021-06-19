@@ -14,7 +14,7 @@ def getParams():
 
     # Training
     argsParser.add_argument('--train', default=True, action='store_true', help='entering training mode')
-    argsParser.add_argument('--num_episodes', default=100, type=int,
+    argsParser.add_argument('--num_episodes', default=300, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")
@@ -43,8 +43,11 @@ def getParams():
                             help="Define pheromone evaporation coefficient for aco")
     argsParser.add_argument('--pheromone_constant', default=1.0, type=float,
                             help="Define the pheromone constant for aco")
-    argsParser.add_argument('--aco_iterations', default=80, type=int,
+    argsParser.add_argument('--aco_iterations', default=300, type=int,
                             help="Define the number of iterations for aco")
+    argsParser.add_argument('--aco_increasing_factor', default=0.9, type=float,
+                            help="Define the increasing factor for aco. This will be applied in the process of the "
+                                 "aco boost.")
 
     args = argsParser.parse_args()
     args = vars(args)

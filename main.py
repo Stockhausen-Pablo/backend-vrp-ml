@@ -39,16 +39,18 @@ def main(args):
     pheromone_evaporation_coefficient = args['pheromone_evaporation_coefficient']
     pheromone_constant = args['pheromone_constant']
     aco_iterations = args['aco_iterations']
-
+    aco_increasing_factor = args['aco_increasing_factor']
     # --------------------
     # INPUT
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    dataSet = input("Please specify the data source of the stops to be processed:")
+    dataSet = input("Please specify the data source of the stops to be processed:") or 'test'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
-    microhub_name = input("Please specify the microhub name:")
+    microhub_name = input("Please specify the microhub name:") or "Prenzlauer_Berg"
+    shipper_name = input("Please specify the shipper name:") or "Brodowin"
+    carrier_name = input("Please specify the carrier name:") or "Urban_Cargo"
     amount_vehicles = int(input("How many vehicles will be used:"))
     capacity_weight = float(input("What is the maximum weight that the vehicle can carry:"))
     capacity_volume = float(input("What is the maximum volume that the vehicle can hold:"))
@@ -100,7 +102,7 @@ def main(args):
         # --------------------
         # NORMALIZING PROBABILITIES
         # normalize the ant probability Matrix
-        normalized_probability_Matrix = normalize_df(aco_probability_Matrix)
+        normalized_aco_probability_Matrix = normalize_df(aco_probability_Matrix)
 
         # --------------------
         # ENVIRONMENT
@@ -112,7 +114,7 @@ def main(args):
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
-            probabilityMatrix=normalized_probability_Matrix,
+            probabilityMatrix=normalized_aco_probability_Matrix,
             distanceMatrix=distance_matrix,
             microHub=tManager.getMicrohub(),
             capacityDemands=tManager.getCapacityDemands(),
@@ -124,7 +126,6 @@ def main(args):
         # --------------------
         # POLICY NETWORK
         policyManager = PolicyManager(environment.getStateHashes(),
-                                      normalized_probability_Matrix,
                                       learning_rate,
                                       discount_factor,
                                       exploration_factor
@@ -132,8 +133,12 @@ def main(args):
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL
-        model_name = create_model_name(microhub_name, capacity_weight, capacity_volume, ml_agent)
+        model_name = create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name, ml_agent)
         policyManager.loadModel(model_name)
+
+        # --------------------
+        # APPLY ACO TO ML-MODEL
+        policyManager.apply_aco_on_policy(aco_increasing_factor, normalized_aco_probability_Matrix)
 
         # --------------------
         # AGENT
@@ -164,6 +169,8 @@ def main(args):
         # SAVING TRAINING RESULTS
         # w = weight
         # v = volume
+        # s = shipper
+        # c = carrier
         # a = agent
         policyManager.saveModel(model_name)
 
