@@ -5,7 +5,7 @@ import argparse
 def getParams():
     # Creating the parser
     argsParser = argparse.ArgumentParser(
-        description='Reinforcment Learning by using a MDP/REINFORCE to solve CVRP')
+        description='Reinforcement Learning by using a MDP/REINFORCE to solve CVRP')
 
     # Add arguments
     # ------------------
@@ -13,14 +13,14 @@ def getParams():
     argsParser.add_argument('--convert', default=False, action='store_true', help='entering convert mode')
 
     # Training
-    argsParser.add_argument('--train', default=True, action='store_true', help='entering training mode')
+    argsParser.add_argument('--train', default=False, action='store_true', help='entering training mode')
     argsParser.add_argument('--num_episodes', default=300, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")
 
     # Testing
-    argsParser.add_argument('--test', default=False, action='store_false', help="entering test mode")
+    argsParser.add_argument('--test', default=False, action='store_true', help="entering test mode")
 
     # Agent
     argsParser.add_argument('--agent', default='policy_gradient_agent', help="Use the Policy Gradient Agent")
@@ -33,6 +33,21 @@ def getParams():
 
     argsParser.add_argument('--exploration_factor', default=0.05, type=float,
                             help="Define exploration factor")
+
+    argsParser.add_argument('--increasing_factor', default=0.98, type=float,
+                            help="Define increasing factor, for increasing the weight.")
+
+    argsParser.add_argument('--increasing_factor_good_episode', default=0.7, type=float,
+                            help="Define increasing factor, for increasing the weight based on a good episode.")
+
+    argsParser.add_argument('--decreasing_factor', default=1.02, type=float,
+                            help="Define decreasing factor, for decreasing the weight.")
+
+    argsParser.add_argument('--decreasing_factor_good_episode', default=1.2, type=float,
+                            help="Define decreasing factor, for decreasing the weight based on a good episode.")
+
+    argsParser.add_argument('--baseline_theta', default=0.00001, type=float,
+                            help="Define small number to converged to in baseline calculation.")
 
     # ACO
     argsParser.add_argument('--aco_alpha_factor', default=0.5, type=float,

@@ -18,8 +18,16 @@ def clip_weight(current_weight, clipValue):
 
 
 class PolicyManager:
-    def __init__(self, state_hashes, learning_rate, discountFactor, exploration_rate,
-                 theta=0.00001):
+    def __init__(self,
+                 state_hashes,
+                 learning_rate,
+                 discount_factor,
+                 exploration_rate,
+                 increasing_factor,
+                 increasing_factor_good_episode,
+                 decreasing_factor,
+                 decreasing_factor_good_episode,
+                 baseline_theta):
         # --------------------
         # STATES / ACTIONS
         self.state_hashes = state_hashes
@@ -28,23 +36,25 @@ class PolicyManager:
 
         # --------------------
         # MODEL-PARAMETER
-        self.discountFactor = discountFactor
+        self.discountFactor = discount_factor
         self.learning_rate = learning_rate
         self.eps = exploration_rate
 
         # --------------------
         # CONTROL-PARAMETER
         self.learning_rate_decay = 0.1
-        self.increasing_factor = 0.95
-        self.decreasing_factor = 1.05
-        self.decrease_overall = False
-        self.theta = float(theta)
+        self.increasing_factor = increasing_factor
+        self.decreasing_factor = decreasing_factor
+        self.increasing_factor_good_episode = increasing_factor_good_episode
+        self.decreasing_factor_good_episode = decreasing_factor_good_episode
+        self.enhance_good_episode = False
+        self.theta = float(baseline_theta)
         self.penultimate_reward = 0.0
 
         # --------------------
         # MODEL-CONTEXT SPECIFIC
         self.G = 0
-        self.old_policy_reward = 10000000
+        self.old_policy_reward = 0.0
         self.baseline_estimate = np.zeros_like(state_hashes, dtype=np.float32)
 
         # --------------------
@@ -85,11 +95,9 @@ class PolicyManager:
         if episode_reward < self.old_policy_reward:
             print(
                 "----------------------------------------------GOOD EPISODE----------------------------------------------------")
-            self.increasing_factor = 0.7  # 0.92
-            self.decreasing_factor = 1.20  # 1.07
-            self.decrease_overall = True
+            self.enhance_good_episode = True
         else:
-            self.increasing_factor = 1.07
+            self.enhance_good_episode = False
 
         for idx, g in enumerate(self.G):
             print("------------------Step ", idx, "------------------")
@@ -166,16 +174,17 @@ class PolicyManager:
             # --------------------
             # APPLY PROBABILITY IN-/DECREASING FACTOR
             if updated_weight > current_weight:
-                updated_weight = current_weight ** self.increasing_factor
+                updated_weight = current_weight ** (self.increasing_factor_good_episode if self.enhance_good_episode else self.increasing_factor)
             if updated_weight < current_weight:
-                updated_weight = current_weight ** self.decreasing_factor
+                updated_weight = current_weight ** (self.decreasing_factor_good_episode if self.enhance_good_episode else self.decreasing_factor)
 
             # --------------------
             # REDUCE ALTERNATIVE ACTION EVALUATIONS
-            if self.decrease_overall:
+            if self.enhance_good_episode:
                 for state in episode[idx].possible_next_states:
-                    self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[
-                                                                         state_hash, state] ** self.decreasing_factor
+                    if state != next_state_hash:
+                        self.policy_action_space.at[state_hash, state] = self.policy_action_space.at[
+                                                                         state_hash, state] ** (self.decreasing_factor_good_episode if self.enhance_good_episode else self.decreasing_factor)
 
             # --------------------
             # BACKPROPAGATION
@@ -201,23 +210,19 @@ class PolicyManager:
         print("New_Policy_Reward: ", new_policy_reward)
         policy_relevant_reward = new_policy_reward
 
-        # if old_policy_reward < new_policy_reward:
-        #    self.policy_action_space = policy_action_space_copy
-        #    policy_relevant_reward = old_policy_reward
-
         # --------------------
         # EVALUATE INCREASING EPSILON
         # IF REWARD WAS STABLE OVER 3 TIMESTEPS, increase epsilon
         eps = self.eps
         if (self.penultimate_reward == self.old_policy_reward == new_policy_reward) and epoch < (0.7 * num_episodes):
             print("Increased exploration chance")
-            eps = self.eps ** 0.5
+            eps = self.eps ** 0.2
 
         # --------------------
         # RESET PARAMETERS
         self.increasing_factor = 0.95
         self.decreasing_factor = 1.05
-        self.decrease_overall = False
+        self.enhance_good_episode = False
         # self.baseline_estimate = np.zeros_like(self.state_hashes, dtype=np.float32)
         self.penultimate_reward = self.old_policy_reward
         self.old_policy_reward = new_policy_reward

@@ -71,11 +71,14 @@ class VRPAgent:
             self.env.reset()
 
         best_policy_reward = min(self.episode_statistics.episode_policy_reward)
-        last_policy_reward = self.episode_statistics.episode_policy_reward[len(self.episode_statistics.episode_policy_reward)-1]
+        worst_policy_reward = max(self.episode_statistics.episode_policy_reward)
+        last_policy_reward = self.episode_statistics.episode_policy_reward[
+            len(self.episode_statistics.episode_policy_reward) - 1]
 
         return self.episode_statistics, \
                self.policyManager.policy_action_space, \
-               best_policy_reward,\
+               best_policy_reward, \
+               worst_policy_reward, \
                last_policy_reward
 
     def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states,

@@ -4,11 +4,10 @@ class VRPEnvironment:
         a predictive model of the env that resolves probabilities of next reward and next state following an action from a state
     """
 
-    def __init__(self, states, actions, probabilityMatrix, distanceMatrix, microHub, capacityDemands,
+    def __init__(self, states, actions, distanceMatrix, microHub, capacityDemands,
                  vehicles, vehicleWeight, vehicleVolume):
         self.states = states
         self.actions = actions
-        self.probabilityMatrix = probabilityMatrix
         self.distanceMatrix = distanceMatrix
         self.microHub = microHub
         self.microhub_counter = 0
