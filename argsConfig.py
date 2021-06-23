@@ -14,7 +14,7 @@ def getParams():
 
     # Training
     argsParser.add_argument('--train', default=False, action='store_true', help='entering training mode')
-    argsParser.add_argument('--num_episodes', default=300, type=int,
+    argsParser.add_argument('--num_episodes', default=200, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")
@@ -24,6 +24,9 @@ def getParams():
 
     # Agent
     argsParser.add_argument('--agent', default='policy_gradient_agent', help="Use the Policy Gradient Agent")
+
+    argsParser.add_argument('--stay_duration', default=5.0, type=float,
+                            help="Define stay duration")
 
     argsParser.add_argument('--learning_rate', default=2 ** -3, type=float,
                             help="Define learning rate")

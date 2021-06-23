@@ -2,11 +2,57 @@ import numpy as np
 import math
 
 
+def calculate_delivery_time(vehicle_speed, stay_duration, final_tours):
+    total_time = 0.0
+    total_distance = 0.0
+    for tour in final_tours:
+        for idx, stop in enumerate(tour):
+            current_stop = stop
+            next_stop = tour[(idx + 1) % len(tour)]
+            distance = linalg_norm_T(current_stop, next_stop)
+            time_estimated = ((distance / vehicle_speed) * 60) * math.sqrt(2) + stay_duration if distance > 0.0 else 0.0
+            total_time += time_estimated
+            total_distance += distance
+
+    average_time_per_tour = total_time / len(final_tours)
+
+    return total_time, total_distance, average_time_per_tour
+
+
+def calculate_meta_for_za_tour(vehicle_speed, stay_duration, final_tours):
+    total_time = 0.0
+    total_distance = 0.0
+    for tour in final_tours:
+        for idx, stop in enumerate(tour):
+            current_stop = stop
+            next_stop = tour[(idx + 1) % len(tour)]
+            distance = linalg_norm_T(current_stop, next_stop)
+            time_estimated = ((distance / vehicle_speed) * 60) * math.sqrt(2) + stay_duration if distance > 0.0 else 0.0
+            total_time += time_estimated
+            total_distance += distance
+
+    average_time_per_tour = total_time / len(final_tours)
+    average_distance_per_tour = total_distance / len(final_tours)
+
+    return total_time, total_distance, average_time_per_tour, average_distance_per_tour
+
+
 def linalg_norm_T(startStop, endStop):
-    a = [startStop.longitude, startStop.latitude]
-    b = [endStop.longitude, endStop.latitude]
-    distance = np.linalg.norm(np.array(a) - np.array(b), axis=0) * 100
-    return distance * math.sqrt(2)
+    # haversine formula
+    R = 6373.0
+    lat1 = math.radians(startStop.latitude)
+    lon1 = math.radians(startStop.longitude)
+    lat2 = math.radians(endStop.latitude)
+    lon2 = math.radians(endStop.longitude)
+
+    dlon = lon2 - lon1
+    dlat = lat2 - lat1
+
+    #a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    a = math.sin(dlat / 2) * math.sin(dlat/2) + math.sin(dlon/2) * math.sin(dlon/2) * math.cos(lat1) * math.cos(lat2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    distance = R*c
+    return distance
 
 
 def rectified(x):

@@ -1,4 +1,5 @@
 import pandas as pd
+import json
 
 
 def load_memory_df_from_local(pickle_name, state_hashes, microhub_hash):
@@ -40,3 +41,9 @@ def save_memory_df_to_local(pickle_name, df_source):
 
 def create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name, delivery_date, ml_agent):
     return microhub_name + '_w_' + str(capacity_weight) + '_v_' + str(capacity_volume) + '_s_'+ shipper_name + '_c_' + carrier_name + '_d_' + delivery_date + '_a_' + str(ml_agent)
+
+
+def export_constructed_tours_to_json(file_name, final_tours):
+    with open(r'data/constructed_tours_by_za/'+file_name+'.json', 'w+') as file:
+        json_data = json.dumps(final_tours)
+        file.write(json_data)

@@ -20,7 +20,7 @@ def pltcolor(stopid):
 
 
 def plotCoordinatesWithCoordinatesLabel():
-    _, stopid, x, y, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
+    _, stopid, x, y, _, _, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
 
     cols = pltcolor(stopid)
 
@@ -32,7 +32,7 @@ def plotCoordinatesWithCoordinatesLabel():
 
 
 def plotCoordinatesWithStopNrLabel():
-    _, stopid, x, y, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
+    _, stopid, x, y, _, _, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
 
     cols = pltcolor(stopid)
 
@@ -58,7 +58,7 @@ def plotTourWithStopNrLabel(tours):
         line, = plt.plot([x1, x2], [y1, y2], 'k-', linewidth=2)
         line.set_color(col)
 
-    _, stopid, x, y, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
+    _, stopid, x, y, _, _, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
 
     cols = pltcolor(stopid)
 

@@ -54,7 +54,7 @@ class AntManager:
         self.ants = self.setAnts(self.start_stop)
 
         # For Solution
-        #self.ant_probability_Matrix = load_memory_df_from_local('./probabilityMatrixByAnts.pkl', self.nodes)
+        # self.ant_probability_Matrix = load_memory_df_from_local('./probabilityMatrixByAnts.pkl', self.nodes)
         self.ant_probability_Matrix = self.setup_antProbabilyMatrix()
         self.shortest_distance = None
         self.shortest_path = None
@@ -88,6 +88,7 @@ class AntManager:
         return df_new_pheromoneMatrix
 
     def updateProbabilityMatrix(self):
+        print('-updating aco probability matrix-')
         sum_all_probabilities = 0.0
         for i in self.ant_probability_Matrix:
             for j in self.ant_probability_Matrix:
@@ -132,10 +133,10 @@ class AntManager:
                 self.ant_probability_Matrix.at[i, j] = float(probability_i_j)
 
     def updatePheromoneMatrix(self):
+        print('-updating pheromone matrix-')
         for df_start in self.df_updated_pheromoneMatrix:
             self.microhub_counter = 0
             for df_end in self.df_updated_pheromoneMatrix:
-                microhubExists = False
 
                 if df_end not in self.df_pheromoneMatrix.index.values:
                     new_row = pd.Series(name=df_end)
@@ -145,17 +146,18 @@ class AntManager:
 
                 self.df_pheromoneMatrix.at[df_start, df_end] *= (1 - self.pheromone_evaporation_coefficient)
                 self.df_pheromoneMatrix.at[df_start, df_end] += self.df_updated_pheromoneMatrix.at[df_start, df_end]
-
-                if microhubExists:
-                    self.microhub_counter += 1
+        self.df_pheromoneMatrix.reset_index()
+        print('done updating pheromone matrix')
 
     def invalid_updatePheromoneMatrix(self):
         for start in range(len(self.pheromoneMatrix)):
             for end in range(len(self.pheromoneMatrix)):
                 self.pheromoneMatrix[start][end] *= (1 - self.pheromone_evaporation_coefficient)
                 self.pheromoneMatrix[start][end] += self.updated_pheromoneMatrix[start][end]
+        self.pheromoneMatrix.reset_index()
 
     def updatePheromoneMatrixByAnt(self, ant):
+        print('-updating pheromone matrix based on ant solution-')
         tours = ant.getTours()
         self.microhub_counter = 0
         for tour in tours:
@@ -184,7 +186,8 @@ class AntManager:
                     if ('{}/{}'.format(self.microhub_hash,
                                        self.microhub_counter) not in self.df_updated_pheromoneMatrix.index.values):
                         new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
-                        self.df_updated_pheromoneMatrix = self.df_updated_pheromoneMatrix.append(new_row, ignore_index=False)
+                        self.df_updated_pheromoneMatrix = self.df_updated_pheromoneMatrix.append(new_row,
+                                                                                                 ignore_index=False)
                         self.df_updated_pheromoneMatrix['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.0
                         self.df_updated_pheromoneMatrix.fillna(value=0.0, inplace=True)
                     self.df_updated_pheromoneMatrix.at[stop_hash, stop_b_hash] += new_pheromoneValue
@@ -192,8 +195,9 @@ class AntManager:
                 else:
                     self.df_updated_pheromoneMatrix.at[stop_hash, stop_b_hash] += new_pheromoneValue
                     self.df_updated_pheromoneMatrix.at[stop_b_hash, stop_hash] += new_pheromoneValue
-                # self.updated_pheromoneMatrix[stop.stopid][stop_b.stopid] += new_pheromoneValue
-                # self.updated_pheromoneMatrix[stop_b.stopid][stop.stopid] += new_pheromoneValue
+            self.df_updated_pheromoneMatrix.reset_index()
+            # self.updated_pheromoneMatrix[stop.stopid][stop_b.stopid] += new_pheromoneValue
+            # self.updated_pheromoneMatrix[stop_b.stopid][stop.stopid] += new_pheromoneValue
 
     def runACO(self):
         print("-Running Colony Optimization-")
@@ -225,6 +229,6 @@ class AntManager:
 
         self.updateProbabilityMatrix()
 
-        #save_memory_df_to_local('./probabilityMatrixByAnts.pkl', self.ant_probability_Matrix)
+        # save_memory_df_to_local('./probabilityMatrixByAnts.pkl', self.ant_probability_Matrix)
 
         return self.shortest_distance, self.shortest_path, self.ant_probability_Matrix

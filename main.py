@@ -8,6 +8,7 @@ from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.Policy.PolicyManager import PolicyManager
 from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
+from src.Utils.helper import calculate_delivery_time
 from src.Utils.memoryLoader import create_model_name
 from src.Utils.plotter import plot_episode_stats, plot_baseline_estimate, plotCoordinatesWithCoordinatesLabel, \
     plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
@@ -19,7 +20,7 @@ def load_stop_data(data_input):
         next(csv_reader, None)
         for row in csv_reader:
             tManager.addStop(
-                Stop(float(row[0]), int(row[1]), float(row[2]), float(row[3]), int(row[4]), int(row[5]), int(row[6])))
+                Stop(str(row[0]), int(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]), int(row[6], int(row[7]))))
     tManager.calculateDistanceMatrix()
     tManager.initCapacityDemands()
 
@@ -29,6 +30,7 @@ def main(args):
     # ARGSPARSE
     # define parameters (the wall of parameters)
     learning_rate = args['learning_rate']
+    stay_duration = args['stay_duration']
     discount_factor = args['discount_factor']
     exploration_factor = args['exploration_factor']
     num_episodes = args['num_episodes']
@@ -54,12 +56,13 @@ def main(args):
     data_input = input("Please specify the data source of the stops to be processed:") or 'test'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
-    microhub_name = input("Please specify the microhub name:") or "Prenzlauer_Berg"
+    microhub_name = input("Please specify the microhub name:") or "Adenauerplatz"
     shipper_name = input("Please specify the shipper name:") or "Brodowin"
-    carrier_name = input("Please specify the carrier name:") or "Urban_Cargo"
+    carrier_name = input("Please specify the carrier name:") or "UrbanCargo"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
-    delivery_date = input("Please specify the delivery date:") or "Wed"
+    delivery_date = input("Please specify the delivery date:") or "Tue"
     amount_vehicles = int(input("How many vehicles will be used:"))
+    vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
     capacity_weight = float(input("What is the maximum weight that the vehicle can carry:"))
     capacity_volume = float(input("What is the maximum volume that the vehicle can hold:"))
 
@@ -239,8 +242,35 @@ def main(args):
         current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
                                                                             environment, max_steps)
         testing_end = timer()
+
+        total_box_amount = 0
+        total_weight = 0.0
+        total_volume = 0.0
+
+        for tour in final_tours:
+            for stop in tour:
+                total_box_amount += stop.boxAmount
+                total_weight += stop.demandWeight
+                total_volume += stop.demandVolume
+
+        mean_box_amount = total_box_amount/len(final_tours)
+        mean_volume = total_volume / len(final_tours)
+        mean_weight = total_weight / len(final_tours)
+        
+        total_time, total_distance, average_time_per_tour = calculate_delivery_time(vehicle_speed, stay_duration, final_tours)
+
+        print("Stop Amount: ", len(tManager.getListOfStops()))
         print("TESTING RUN TIME in s: ", (testing_end - testing_start))
-        print("Constructed_policy_reward: ", current_policy_reward)
+        print("Amount of constructed Tours: ", len(final_tours))
+        print("Mean Box Amount per Tour: ", mean_box_amount)
+        print("Mean Volume per Tour: ", mean_volume)
+        print("Mean Weight per Tour: ", mean_weight)
+        print("Lost Volume per Tour: ", (capacity_volume - mean_volume))
+        print("Lost Weight per Tour: ", (capacity_weight - mean_weight))
+        print("Overall distance: ", total_distance)
+        print("Mean Distance per Tour: ", (total_distance/len(final_tours)))
+        print("Overall Time needed: ", total_time)
+        print("Average Time needed per Tour: ", average_time_per_tour)
 
         # --------------------
         # PLOTTING TOUR (UNNECESSARY IN PRODUCTION)
