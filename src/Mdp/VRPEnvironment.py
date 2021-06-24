@@ -124,33 +124,47 @@ class VRPEnvironment:
         return [state.hashIdentifier for state in self.states]
 
     def possible_rewards(self, state, action_space_list):
-        possible_rewards=self.distanceMatrix.loc[state, action_space_list]
+        possible_rewards = self.distanceMatrix.loc[state, action_space_list]
         return possible_rewards
 
     def getLegalAction(self):
         legal_next_states = []
         legal_next_states_hubs_ignored = []
+        legal_next_states_local_search = dict()
         for stop in self.possibleStops:
             possible_tour_weight = float(stop.demandWeight) + self.current_tour_weight
             possible_tour_volume = float(stop.demandVolume) + self.current_tour_volume
             if (possible_tour_weight <= self.vehicleWeight and possible_tour_volume <= self.vehicleVolume):
-                legal_next_states.append(stop.hashIdentifier)
-                legal_next_states_hubs_ignored.append(stop.hashIdentifier)
+                if (stop.hashIdentifier == self.microHub.hashIdentifier):
+                    microhub_counter = self.microhub_counter + 1
+                    legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, microhub_counter))
+                    legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
+                    legal_next_states_local_search['{}/{}'.format(self.microHub.hashIdentifier, microhub_counter)] = self.reward_func(self.current_state, stop)
+                else:
+                    legal_next_states.append(stop.hashIdentifier)
+                    legal_next_states_hubs_ignored.append(stop.hashIdentifier)
+                    legal_next_states_local_search[stop.hashIdentifier] = self.reward_func(
+                        self.current_state, stop)
+
+        legal_next_states_local_search = {k: v for k,v in sorted(legal_next_states_local_search.items(), key = lambda x: x[1])}
 
         if legal_next_states:
             action = 1
-            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
+            return action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search, self.microhub_counter
 
         if not legal_next_states and not self.possibleStops:
-            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, self.microhub_counter))
+            microhub_counter = self.microhub_counter + 1
+            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, microhub_counter))
             legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
             action = 2
             self.microhub_counter += 1
-            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
+            #shuffle(legal_next_states)
+            return action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search, self.microhub_counter
 
         if not legal_next_states and self.possibleStops:
-            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, self.microhub_counter))
+            microhub_counter = self.microhub_counter + 1
+            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, microhub_counter))
             legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
             action = 0
             self.microhub_counter += 1
-            return action, legal_next_states, legal_next_states_hubs_ignored, self.microhub_counter
+            return action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search, self.microhub_counter

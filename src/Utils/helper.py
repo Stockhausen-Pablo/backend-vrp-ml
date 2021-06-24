@@ -10,7 +10,7 @@ def calculate_delivery_time(vehicle_speed, stay_duration, final_tours):
             current_stop = stop
             next_stop = tour[(idx + 1) % len(tour)]
             distance = linalg_norm_T(current_stop, next_stop)
-            time_estimated = ((distance / vehicle_speed) * 60) * math.sqrt(2) + stay_duration if distance > 0.0 else 0.0
+            time_estimated = ((distance / vehicle_speed) * 60) + stay_duration if distance > 0.0 else 0.0
             total_time += time_estimated
             total_distance += distance
 
@@ -27,7 +27,7 @@ def calculate_meta_for_za_tour(vehicle_speed, stay_duration, final_tours):
             current_stop = stop
             next_stop = tour[(idx + 1) % len(tour)]
             distance = linalg_norm_T(current_stop, next_stop)
-            time_estimated = ((distance / vehicle_speed) * 60) * math.sqrt(2) + stay_duration if distance > 0.0 else 0.0
+            time_estimated = ((distance / vehicle_speed) * 60) + stay_duration if distance > 0.0 else 0.0
             total_time += time_estimated
             total_distance += distance
 
@@ -48,7 +48,6 @@ def linalg_norm_T(startStop, endStop):
     dlon = lon2 - lon1
     dlat = lat2 - lat1
 
-    #a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
     a = math.sin(dlat / 2) * math.sin(dlat/2) + math.sin(dlon/2) * math.sin(dlon/2) * math.cos(lat1) * math.cos(lat2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     distance = R*c
@@ -60,6 +59,9 @@ def rectified(x):
 
 
 def normalize_list(probList):
+    if min(probList) == 0.0 and max(probList) == 0.0:
+        probList += 1 / len(probList)
+        return probList
     s = sum(probList)
     normRow = [float(i) / s for i in probList]
     return normRow

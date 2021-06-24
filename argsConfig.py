@@ -37,16 +37,16 @@ def getParams():
     argsParser.add_argument('--exploration_factor', default=0.05, type=float,
                             help="Define exploration factor")
 
-    argsParser.add_argument('--increasing_factor', default=0.98, type=float,
+    argsParser.add_argument('--increasing_factor', default=0.95, type=float,
                             help="Define increasing factor, for increasing the weight.")
 
-    argsParser.add_argument('--increasing_factor_good_episode', default=0.7, type=float,
+    argsParser.add_argument('--increasing_factor_good_episode', default=0.85, type=float,
                             help="Define increasing factor, for increasing the weight based on a good episode.")
 
-    argsParser.add_argument('--decreasing_factor', default=1.02, type=float,
+    argsParser.add_argument('--decreasing_factor', default=1.05, type=float,
                             help="Define decreasing factor, for decreasing the weight.")
 
-    argsParser.add_argument('--decreasing_factor_good_episode', default=1.2, type=float,
+    argsParser.add_argument('--decreasing_factor_good_episode', default=1.06, type=float,
                             help="Define decreasing factor, for decreasing the weight based on a good episode.")
 
     argsParser.add_argument('--baseline_theta', default=0.00001, type=float,

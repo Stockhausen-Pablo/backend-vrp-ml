@@ -53,18 +53,18 @@ def main(args):
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    data_input = input("Please specify the data source of the stops to be processed:") or 'test'
+    data_input = input("Please specify the data source of the stops to be processed:") or '2021_05_05_TourStop'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
     microhub_name = input("Please specify the microhub name:") or "Adenauerplatz"
     shipper_name = input("Please specify the shipper name:") or "Brodowin"
     carrier_name = input("Please specify the carrier name:") or "UrbanCargo"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
-    delivery_date = input("Please specify the delivery date:") or "Tue"
-    amount_vehicles = int(input("How many vehicles will be used:"))
+    delivery_date = input("Please specify the delivery date:") or "Test"
+    amount_vehicles = int(input("How many vehicles will be used:") or 1)
     vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
-    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:"))
-    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:"))
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 250)
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 700)
 
     # --------------------
     # SETTING UP TOUR MANAGER
@@ -118,6 +118,7 @@ def main(args):
         # --------------------
         # ENVIRONMENT
         # setting up MDP-Environment
+        print('SETTING UP ENVIRONMENT')
         environment = VRPEnvironment(
             states=tManager.getListOfStops(),
             # actions:
@@ -148,16 +149,19 @@ def main(args):
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL
+        print('LOADING MODEL')
         model_name = create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name,
                                        delivery_date, ml_agent)
         policyManager.loadModel(model_name)
 
         # --------------------
         # APPLY ACO TO ML-MODEL
+        print('APPLYING ACO ON MODEL')
         policyManager.apply_aco_on_policy(aco_increasing_factor, aco_probability_Matrix)
 
         # --------------------
         # AGENT
+        print('SETTING UP AGENT')
         agent = VRPAgent(env=environment,
                          policyManager=policyManager,
                          num_episodes=num_episodes,
@@ -167,6 +171,7 @@ def main(args):
 
         # --------------------
         # TRAINING RESULTS
+        print('STARTING TRAINING')
         training_start = timer()
         episodeStatistics, policy_action_space, best_policy_reward, worst_policy_reward, last_policy_reward = agent.train_model()
         training_end = timer()
@@ -243,6 +248,8 @@ def main(args):
                                                                             environment, max_steps)
         testing_end = timer()
 
+        # --------------------
+        # CALCULATE/PRINT META TOUR CONSTRUCTION DATA
         total_box_amount = 0
         total_weight = 0.0
         total_volume = 0.0
