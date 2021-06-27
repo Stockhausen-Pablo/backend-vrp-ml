@@ -384,7 +384,7 @@ class PolicyManager:
                 diviation = lowest_distance / choosen_distance
                 variance_factor = 1-diviation
 
-                if variance_factor > 0.65:
+                if variance_factor > 0.5:
                     highest_prob_action_space = lowest_state
 
             return highest_prob_action_space, highest_prob

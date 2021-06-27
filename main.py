@@ -248,6 +248,10 @@ def main(args):
                                                                             environment, max_steps)
         testing_end = timer()
 
+        for tour in final_tours:
+            for stop in tour:
+                print(stop.tourStopId)
+
         # --------------------
         # CALCULATE/PRINT META TOUR CONSTRUCTION DATA
         total_box_amount = 0
