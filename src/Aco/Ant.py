@@ -81,6 +81,7 @@ class Ant:
         self.tour_complete = True
 
     def selectStop(self):
+        print('-ant is selecting stop-')
         if self.firstInit:
             import random
             return random.choice(self.possibleStops)
@@ -99,9 +100,7 @@ class Ant:
                 current_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
             if next_hash == self.microhub_hash:
                 next_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
-            df_pheromoneValue = self.df_pheromoneMatrix.at[current_hash, next_hash].astype(float)
-            # pheromoneValue = self.pheromoneMatrix[self.current_stop.stopid][possible_next_stop.stopid]
-            # self.pheromoneMatrix[self.current_stop.stopid][self.current_stop.stopid] = 0.0
+            df_pheromoneValue = self.df_pheromoneMatrix.at[current_hash, next_hash]
             distance = float(tManager.getDistanceByMatrix(self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier))
             stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow((1 / distance if distance else 0),
                                                                                                   self.discountBeta)
@@ -140,11 +139,13 @@ class Ant:
         assert False
 
     def traverseAnt(self, startStop, endStop):
+        print('-ant is traversing between stops-')
         self.updateTour(endStop)
         self.updateDistanceTravelled(startStop, endStop)
         self.current_stop = endStop
 
     def startNewTour(self, microHub, temp_stops):
+        print('-ant is starting a new tour-')
         self.microhub_counter += 1
         self.tour.append(microHub)
         self.allTours.append(self.tour.copy())

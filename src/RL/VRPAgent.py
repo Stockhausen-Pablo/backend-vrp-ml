@@ -71,11 +71,14 @@ class VRPAgent:
             self.env.reset()
 
         best_policy_reward = min(self.episode_statistics.episode_policy_reward)
-        last_policy_reward = self.episode_statistics.episode_policy_reward[len(self.episode_statistics.episode_policy_reward)-1]
+        worst_policy_reward = max(self.episode_statistics.episode_policy_reward)
+        last_policy_reward = self.episode_statistics.episode_policy_reward[
+            len(self.episode_statistics.episode_policy_reward) - 1]
 
         return self.episode_statistics, \
                self.policyManager.policy_action_space, \
-               best_policy_reward,\
+               best_policy_reward, \
+               worst_policy_reward, \
                last_policy_reward
 
     def update(self, state, action, action_space_prob, reward, next_state, done, possible_next_states,
@@ -115,14 +118,17 @@ class VRPAgent:
             # --------------------
             # LEGAL NEXT STATES
             # given by the environment
-            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, microhub_counter = self.getLegalAction()
+            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search, microhub_counter = self.getLegalAction()
             possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier,
                                                               legal_next_states if legal_next_action == 1 else [
                                                                   self.env.get_microhub_hash()])
 
             # --------------------
             # CHOOSE ACTION SPACE
-            action_space, action_space_prob = self.policyManager.get_action_space(self.eps, state, legal_next_states,
+            action_space, action_space_prob = self.policyManager.get_action_space(self.eps,
+                                                                                  state,
+                                                                                  legal_next_states,
+                                                                                  legal_next_states_local_search,
                                                                                   microhub_counter)
 
             # --------------------
