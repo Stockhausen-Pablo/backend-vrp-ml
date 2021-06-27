@@ -41,6 +41,8 @@ def main(args):
     decreasing_factor = args['decreasing_factor']
     decreasing_factor_good_episode = args['decreasing_factor_good_episode']
     baseline_theta = args['baseline_theta']
+    local_search_threshold = args['local_search_threshold']
+    policy_reset_threshold = args['policy_reset_threshold']
     # aco settings
     aco_alpha_factor = args['aco_alpha_factor']
     aco_beta_factor = args['aco_beta_factor']
@@ -56,15 +58,15 @@ def main(args):
     data_input = input("Please specify the data source of the stops to be processed:") or '2021_05_05_TourStop'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
-    microhub_name = input("Please specify the microhub name:") or "Adenauerplatz"
-    shipper_name = input("Please specify the shipper name:") or "Brodowin"
-    carrier_name = input("Please specify the carrier name:") or "UrbanCargo"
+    microhub_name = input("Please specify the microhub name:") or "PrenzlauerBerg"
+    shipper_name = input("Please specify the shipper name:") or "Landkorb"
+    carrier_name = input("Please specify the carrier name:") or "VeloCarrier"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
     delivery_date = input("Please specify the delivery date:") or "Test"
-    amount_vehicles = int(input("How many vehicles will be used:") or 1)
-    vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
-    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 250)
-    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 700)
+    amount_vehicles = int(input("How many vehicles will be used:") or 2)
+    vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 15)
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 180)
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 1200)
 
     # --------------------
     # SETTING UP TOUR MANAGER
@@ -144,7 +146,9 @@ def main(args):
                                       increasing_factor_good_episode,
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
-                                      baseline_theta
+                                      baseline_theta,
+                                      local_search_threshold,
+                                      policy_reset_threshold
                                       )
 
         # --------------------
@@ -233,8 +237,9 @@ def main(args):
                                       increasing_factor_good_episode,
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
-                                      baseline_theta
-                                      )
+                                      baseline_theta,
+                                      local_search_threshold,
+                                      policy_reset_threshold)
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL

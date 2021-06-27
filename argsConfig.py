@@ -46,11 +46,17 @@ def getParams():
     argsParser.add_argument('--decreasing_factor', default=1.05, type=float,
                             help="Define decreasing factor, for decreasing the weight.")
 
-    argsParser.add_argument('--decreasing_factor_good_episode', default=1.06, type=float,
+    argsParser.add_argument('--decreasing_factor_good_episode', default=1.1, type=float,
                             help="Define decreasing factor, for decreasing the weight based on a good episode.")
 
     argsParser.add_argument('--baseline_theta', default=0.00001, type=float,
                             help="Define small number to converged to in baseline calculation.")
+
+    argsParser.add_argument('--local_search_threshold', default=0.6, type=float,
+                            help="Define the threshold to apply local search.")
+
+    argsParser.add_argument('--policy_reset_threshold', default=-5.0, type=float,
+                            help="Define the threshold to reset policies.")
 
     # ACO
     argsParser.add_argument('--aco_alpha_factor', default=0.5, type=float,

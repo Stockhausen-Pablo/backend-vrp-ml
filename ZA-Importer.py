@@ -25,7 +25,7 @@ data_set = input("Please enter the name of the file:") or '2021_05_04_za_tours'
 vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
 stay_duration = int(input("How long is the stay duration per Stopp: ") or 5)
 
-microhub = make_simple_stop(13.3069357, 52.5013048)
+microhub = make_simple_stop(13.43599,52.53973000000001)
 
 print("Trying to open the file...")
 with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
