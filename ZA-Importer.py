@@ -7,14 +7,16 @@ from datetime import datetime
 class SimpleStop(object):
     longitude = 0.0
     latitude = 0.0
+    tourStopId = 0
 
-    def __init__(self, longitude, latitude):
+    def __init__(self, longitude, latitude, tourStopId):
         self.longitude = longitude
         self.latitude = latitude
+        self.tourStopId = tourStopId
 
 
-def make_simple_stop(longitude, latitude):
-    stop = SimpleStop(longitude, latitude)
+def make_simple_stop(longitude, latitude, tourStopId):
+    stop = SimpleStop(longitude, latitude, tourStopId)
     return stop
 
 
@@ -25,7 +27,7 @@ data_set = input("Please enter the name of the file:") or '2021_05_04_za_tours'
 vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
 stay_duration = int(input("How long is the stay duration per Stopp: ") or 5)
 
-microhub = make_simple_stop(13.43599,52.53973000000001)
+microhub = make_simple_stop(13.43599, 52.53973000000001, 0)
 
 print("Trying to open the file...")
 with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
@@ -38,7 +40,7 @@ with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
         tour = []
         for stop in za_tour.get('stops'):
             stop_counter += 1
-            current_stop = make_simple_stop(stop.get('address').get('longitude'), stop.get('address').get('latitude'))
+            current_stop = make_simple_stop(stop.get('address').get('longitude'), stop.get('address').get('latitude'), stop.get('tourStopId'))
             tour.append(current_stop)
         all_tours.append(tour)
         tour = []
@@ -51,6 +53,9 @@ with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
 
     total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_meta_for_za_tour(
         vehicle_speed, stay_duration, all_tours)
+    for tour in all_tours:
+        for stop in tour:
+            print(stop.tourStopId)
     print("Overall distance: ", total_distance)
     print("Mean Distance per Tour: ", average_distance_per_tour)
     print("Overall Time needed: ", total_time)

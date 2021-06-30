@@ -104,6 +104,8 @@ class PolicyManager:
         else:
             self.enhance_good_episode = False
 
+        print("Enhance good episode: ", self.enhance_good_episode)
+
         for idx, g in enumerate(self.G):
             print("------------------Step ", idx, "------------------")
             # --------------------
@@ -185,20 +187,20 @@ class PolicyManager:
             final_weight = updated_weight
             if updated_weight > current_weight:
                 final_weight = current_weight ** (
-                    self.increasing_factor_good_episode if self.enhance_good_episode else self.increasing_factor)
-            if updated_weight < current_weight:
+                    self.increasing_factor_good_episode if self.enhance_good_episode is True else self.increasing_factor)
+            if updated_weight < current_weight and self.enhance_good_episode is False:
                 final_weight = current_weight ** (
-                    self.decreasing_factor_good_episode if self.enhance_good_episode else self.decreasing_factor)
+                    self.decreasing_factor_good_episode if self.enhance_good_episode is True else self.decreasing_factor)
 
             # --------------------
             # REDUCE ALTERNATIVE ACTION EVALUATIONS
-            if self.enhance_good_episode and updated_weight > current_weight:
+            if self.enhance_good_episode is True and updated_weight > current_weight:
                 reward_difference_reduced = (
-                            ((10 * np.log10(reward_difference)) / np.log(10)) / 100) if reward_difference > 0 else 0
+                        ((10 * np.log10(reward_difference)) / np.log(10)) / 100) if reward_difference > 0 else 0
                 to_update_states = episode[idx].possible_next_states
                 to_update_states.remove(next_state_hash)
                 self.policy_action_space.loc[state_hash, to_update_states] **= (
-                            self.decreasing_factor_good_episode + reward_difference_reduced)
+                        self.decreasing_factor_good_episode + (reward_difference_reduced if reward_difference_reduced > 0 else 0))
             # --------------------
             # BACKPROPAGATION
             # Backpropagation mit Trägheitsterm fehlt
@@ -218,12 +220,16 @@ class PolicyManager:
 
         # --------------------
         # BUILD AND COMPARE POLICIES (OLD vs. NEW)
+        print('Constructing new Policy')
         new_policy_reward, new_tour = self.construct_policy(self.policy_action_space, env, max_steps)
         print("-------------------Finalize-------------------")
+        print("Enhance good episode: ", self.enhance_good_episode)
+        print("Old_Policy_Reward: ", self.old_policy_reward)
         print("New_Policy_Reward: ", new_policy_reward)
         policy_relevant_reward = new_policy_reward
 
-        if self.enhance_good_episode == False and (self.old_policy_reward - new_policy_reward) < self.policy_reset_threshold:
+        if self.enhance_good_episode is False and ((self.old_policy_reward - new_policy_reward) < self.policy_reset_threshold) and self.old_policy_reward > 0.0:
+            print("-Resetting policy to old standard-")
             self.policy_action_space = policy_action_space_copy
             policy_relevant_reward = self.old_policy_reward
 
@@ -233,7 +239,7 @@ class PolicyManager:
         eps = self.eps
         if (self.penultimate_reward == self.old_policy_reward == new_policy_reward) and epoch < (0.7 * num_episodes):
             print("Increased exploration chance")
-            eps = self.eps ** 0.2
+            eps = self.eps ** 0.7
 
         # --------------------
         # RESET PARAMETERS
@@ -253,7 +259,7 @@ class PolicyManager:
         state = env.reset()
         tour.append(state)
         for step_t in range(max_steps):
-            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search, microhub_counter = env.getLegalAction()
+            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_local_search_capacities, microhub_counter = env.getLegalAction()
             action_space = self.get_action_space_by_policy(state, legal_next_states, policy, microhub_counter)
             next_state, reward, done, currentTour, currentTours = env.step(legal_next_action, action_space)
             policy_reward += reward
@@ -335,7 +341,13 @@ class PolicyManager:
         return K.mean(-log_lik * advantages)
 
     def get_action_space_by_policy(self, state, legal_next_states, policy, microhub_counter):
-        if (state.hashIdentifier == self.microhub_hash):
+        if state.hashIdentifier == self.microhub_hash:
+            if '{}/{}'.format(self.microhub_hash, microhub_counter) not in self.policy_action_space.index.values:
+                new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
+                self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
+                self.policy_action_space.fillna(value=0.05, inplace=True)
+                self.policy_action_space['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 1 / len(
+                    self.state_hashes)
             action_space_prob = policy.loc[
                 '{}/{}'.format(state.hashIdentifier, microhub_counter), legal_next_states].to_numpy()
         else:
@@ -346,14 +358,16 @@ class PolicyManager:
         highest_prob_action_space = legal_next_states[index]
         return highest_prob_action_space
 
-    def get_action_space(self, eps, state, legal_next_states, legal_next_states_local_search, microhub_counter_env):
+    def get_action_space(self, eps, state, legal_next_states, legal_next_states_local_search_distance, legal_next_states_local_search_capacities, microhub_counter_env):
         # Check MicroHub counter
-        if (self.microhub_counter != microhub_counter_env):
+        if self.microhub_counter != microhub_counter_env:
             self.microhub_counter = microhub_counter_env
             if ('{}/{}'.format(self.microhub_hash, self.microhub_counter) not in self.policy_action_space.index.values):
                 new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
                 self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
-                self.policy_action_space['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.05
+                self.policy_action_space.fillna(value=0.05, inplace=True)
+                self.policy_action_space['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 1 / len(
+                    self.state_hashes)
                 # self.policy_action_space.fillna(value=0.05, inplace=True)
                 # self.policy_action_space[self.policy_action_space.eq(0.0)] = self.policy_action_space + (1 / len(self.state_hashes))
 
@@ -386,20 +400,72 @@ class PolicyManager:
                 else:
                     highest_prob_action_space = legal_next_states[index_highest_prob[0]]
 
-            # Evaluate Choosen Action with Local Search
+            # --------------------
+            # APPLY LOCAL SEARCH AND BIN-PACKING(First Fit Decreasing)
             if len(legal_next_states) > 1:
-                lowest_state = next(iter(legal_next_states_local_search))
+                lowest_state_distance = next(iter(legal_next_states_local_search_distance))
+                highest_state_capacities_utilization = next(iter(legal_next_states_local_search_capacities))
+                highest_state_capacities_utilization_weight = legal_next_states_local_search_capacities[highest_state_capacities_utilization][0]
+                highest_state_capacities_utilization_distance = legal_next_states_local_search_distance[highest_state_capacities_utilization]
 
-                lowest_distance = legal_next_states_local_search[lowest_state]
-                choosen_distance = legal_next_states_local_search[highest_prob_action_space]
+                lowest_distance = legal_next_states_local_search_distance[lowest_state_distance]
+                lowest_distance_weight_utilization = legal_next_states_local_search_capacities[lowest_state_distance][0]
+                lowest_distance_volume_utilization = legal_next_states_local_search_capacities[lowest_state_distance][1]
 
-                diviation = lowest_distance / choosen_distance
-                variance_factor = 1 - diviation
+                choosen_distance = legal_next_states_local_search_distance[highest_prob_action_space]
+                choosen_weight_utilization = legal_next_states_local_search_capacities[highest_prob_action_space][0]
+                choosen_volume_utilization = legal_next_states_local_search_capacities[highest_prob_action_space][1]
 
-                if variance_factor > self.local_search_threshold:
-                    highest_prob_action_space = lowest_state
+                #diviation_weight = lowest_distance_weight_utilization - choosen_weight_utilization
+                diviation_distance_highest_utilization = 1 - (lowest_distance / highest_state_capacities_utilization_distance)
+                diviation_distance_choosen = 1 - (lowest_distance / choosen_distance)
 
-            return highest_prob_action_space, highest_prob
+                diff_diviation = diviation_distance_highest_utilization - diviation_distance_choosen
+
+                if diff_diviation < 0:
+                    #divation_weight_to_max = choosen_weight_utilization / highest_state_capacities_utilization_weight
+                    #if divation_weight_to_max < 0.75:
+                    highest_prob_action_space = highest_state_capacities_utilization
+
+                if diviation_distance_highest_utilization > self.local_search_threshold and diviation_distance_choosen > self.local_search_threshold:
+                    divation_weight_to_max = lowest_distance_weight_utilization / highest_state_capacities_utilization_weight
+                    if divation_weight_to_max > 0.5:
+                        highest_prob_action_space = lowest_state_distance
+
+                return highest_prob_action_space, highest_prob
+
+                # if diviation_weight > 0.1:
+                #     # Lower distance might be better
+                #     divation_weight_to_max = lowest_distance_weight_utilization / highest_state_capacities_utilization_weight
+                #     if divation_weight_to_max < 0.5:
+                #         # Highest state capacities might be better
+                #         diviation_distance = lowest_distance / highest_state_capacities_utilization_distance
+                #         variance_factor_distance = 1 - diviation_distance
+                #         if variance_factor_distance > self.local_search_threshold:
+                #             highest_prob_action_space = lowest_state_distance
+                #         else:
+                #             highest_prob_action_space = highest_state_capacities_utilization
+                #     else:
+                #         highest_prob_action_space = lowest_state_distance
+                # else:
+                #     # Choosen might be better
+                #     divation_weight_to_max = choosen_weight_utilization / highest_state_capacities_utilization_weight
+                #     if divation_weight_to_max < 0.5:
+                #         diviation_distance = choosen_distance / highest_state_capacities_utilization_distance
+                #         variance_factor_distance = 1 - diviation_distance
+                #         if variance_factor_distance > self.local_search_threshold:
+                #             highest_prob_action_space = highest_prob_action_space
+                #         else:
+                #             highest_prob_action_space = highest_state_capacities_utilization
+                #     else:
+                #         highest_prob_action_space = highest_prob_action_space
+                #diviation_distance = lowest_distance / choosen_distance
+                #variance_factor_distance = 1 - diviation_distance
+
+                #if variance_factor_distance > self.local_search_threshold or variance_factor_distance < 0:
+                #    highest_prob_action_space = lowest_state_distance
+            else:
+                return highest_prob_action_space, highest_prob
 
     def get_action(self, state):
         action_prob = self.policy_action.loc[state.hashIdentifier].to_numpy()

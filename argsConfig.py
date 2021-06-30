@@ -14,7 +14,7 @@ def getParams():
 
     # Training
     argsParser.add_argument('--train', default=False, action='store_true', help='entering training mode')
-    argsParser.add_argument('--num_episodes', default=200, type=int,
+    argsParser.add_argument('--num_episodes', default=100, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")
@@ -40,22 +40,22 @@ def getParams():
     argsParser.add_argument('--increasing_factor', default=0.95, type=float,
                             help="Define increasing factor, for increasing the weight.")
 
-    argsParser.add_argument('--increasing_factor_good_episode', default=0.85, type=float,
+    argsParser.add_argument('--increasing_factor_good_episode', default=0.9, type=float,
                             help="Define increasing factor, for increasing the weight based on a good episode.")
 
     argsParser.add_argument('--decreasing_factor', default=1.05, type=float,
                             help="Define decreasing factor, for decreasing the weight.")
 
-    argsParser.add_argument('--decreasing_factor_good_episode', default=1.1, type=float,
+    argsParser.add_argument('--decreasing_factor_good_episode', default=1.06, type=float,
                             help="Define decreasing factor, for decreasing the weight based on a good episode.")
 
     argsParser.add_argument('--baseline_theta', default=0.00001, type=float,
                             help="Define small number to converged to in baseline calculation.")
 
-    argsParser.add_argument('--local_search_threshold', default=0.6, type=float,
+    argsParser.add_argument('--local_search_threshold', default=0.5, type=float,
                             help="Define the threshold to apply local search.")
 
-    argsParser.add_argument('--policy_reset_threshold', default=-5.0, type=float,
+    argsParser.add_argument('--policy_reset_threshold', default=-4.0, type=float,
                             help="Define the threshold to reset policies.")
 
     # ACO

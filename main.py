@@ -55,7 +55,7 @@ def main(args):
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    data_input = input("Please specify the data source of the stops to be processed:") or '2021_05_05_TourStop'
+    data_input = input("Please specify the data source of the stops to be processed:") or 'landkorb_2021_05_04_TourStop'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
     microhub_name = input("Please specify the microhub name:") or "PrenzlauerBerg"

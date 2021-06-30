@@ -51,7 +51,8 @@ def linalg_norm_T(startStop, endStop):
     a = math.sin(dlat / 2) * math.sin(dlat/2) + math.sin(dlon/2) * math.sin(dlon/2) * math.cos(lat1) * math.cos(lat2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     distance = R*c
-    return distance
+    distance_approximation = distance * np.sqrt(2)
+    return distance_approximation
 
 
 def rectified(x):
