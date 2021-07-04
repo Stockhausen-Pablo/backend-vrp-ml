@@ -118,7 +118,7 @@ class VRPAgent:
             # --------------------
             # LEGAL NEXT STATES
             # given by the environment
-            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_local_search_capacities, microhub_counter = self.getLegalAction()
+            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, microhub_counter = self.getLegalAction()
             possible_rewards = self.get_possible_rewards_at_t(state.hashIdentifier,
                                                               legal_next_states if legal_next_action == 1 else [
                                                                   self.env.get_microhub_hash()])
@@ -129,7 +129,7 @@ class VRPAgent:
                                                                                   state,
                                                                                   legal_next_states,
                                                                                   legal_next_states_local_search_distance,
-                                                                                  legal_next_states_local_search_capacities,
+                                                                                  legal_next_states_bin_packing_capacities,
                                                                                   microhub_counter)
 
             # --------------------

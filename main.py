@@ -8,7 +8,7 @@ from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.Policy.PolicyManager import PolicyManager
 from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
-from src.Utils.helper import calculate_delivery_time
+from src.Utils.helper import calculate_delivery_time, calculate_meta_for_za_tour
 from src.Utils.memoryLoader import create_model_name
 from src.Utils.plotter import plot_episode_stats, plot_baseline_estimate, plotCoordinatesWithCoordinatesLabel, \
     plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
@@ -273,7 +273,9 @@ def main(args):
         mean_volume = total_volume / len(final_tours)
         mean_weight = total_weight / len(final_tours)
         
-        total_time, total_distance, average_time_per_tour = calculate_delivery_time(vehicle_speed, stay_duration, final_tours)
+        #total_time, total_distance, average_time_per_tour = calculate_delivery_time(vehicle_speed, stay_duration, final_tours)
+        total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_meta_for_za_tour(
+            vehicle_speed, stay_duration, final_tours)
 
         print("Stop Amount: ", len(tManager.getListOfStops()))
         print("TESTING RUN TIME in s: ", (testing_end - testing_start))
