@@ -52,6 +52,15 @@ def getParams():
     argsParser.add_argument('--baseline_theta', default=0.00001, type=float,
                             help="Define small number to converged to in baseline calculation.")
 
+    argsParser.add_argument('--distance_utilization_threshold', default=0.5, type=float,
+                            help="Define the threshold to choose the best action based on distance. Lowering the "
+                                 "value leads too a higher chance choosing the action with the highest capacity "
+                                 "utilization")
+
+    argsParser.add_argument('--capacity_utilization_threshold', default=0.25, type=float,
+                            help="Define the threshold to choose the best action based on capacity. Lowering the "
+                                 "value leads too a higher chance choosing the action with the lowest distance.")
+
     argsParser.add_argument('--local_search_threshold', default=0.5, type=float,
                             help="Define the threshold to apply local search.")
 

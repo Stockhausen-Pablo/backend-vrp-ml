@@ -41,6 +41,8 @@ def main(args):
     decreasing_factor = args['decreasing_factor']
     decreasing_factor_good_episode = args['decreasing_factor_good_episode']
     baseline_theta = args['baseline_theta']
+    distance_utilization_threshold = args['distance_utilization_threshold']
+    capacity_utilization_threshold = args['capacity_utilization_threshold']
     local_search_threshold = args['local_search_threshold']
     policy_reset_threshold = args['policy_reset_threshold']
     # aco settings
@@ -147,6 +149,8 @@ def main(args):
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
                                       baseline_theta,
+                                      distance_utilization_threshold,
+                                      capacity_utilization_threshold,
                                       local_search_threshold,
                                       policy_reset_threshold
                                       )
@@ -238,8 +242,11 @@ def main(args):
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
                                       baseline_theta,
+                                      distance_utilization_threshold,
+                                      capacity_utilization_threshold,
                                       local_search_threshold,
-                                      policy_reset_threshold)
+                                      policy_reset_threshold
+                                      )
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL

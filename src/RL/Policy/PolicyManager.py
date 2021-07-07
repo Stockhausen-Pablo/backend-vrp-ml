@@ -28,6 +28,8 @@ class PolicyManager:
                  decreasing_factor,
                  decreasing_factor_good_episode,
                  baseline_theta,
+                 distance_utilization_threshold,
+                 capacity_utilization_threshold,
                  local_search_threshold,
                  policy_reset_threshold):
         # --------------------
@@ -41,6 +43,8 @@ class PolicyManager:
         self.discount_factor = discount_factor
         self.learning_rate = learning_rate
         self.eps = exploration_rate
+        self.distance_utilization_threshold = distance_utilization_threshold
+        self.capacity_utilization_threshold = capacity_utilization_threshold
         self.local_search_threshold = local_search_threshold
         self.policy_reset_threshold = policy_reset_threshold
 
@@ -69,8 +73,6 @@ class PolicyManager:
         # --------------------
         # COPY OLD POLICY
         policy_action_space_copy = self.policy_action_space.copy()
-        # policy_action_stable = False
-        # policy_action_space_stable = False
 
         # --------------------
         # PREPARE EPISODE MEMORY
@@ -81,7 +83,7 @@ class PolicyManager:
 
         # --------------------
         # CALCULATE G_t
-        G_t = self.compute_G_t(reward_memory, gamma)
+        G_t = self.compute_G_t(reward_memory)
         loseHistory = []
         J_avR = self.compute_J_avR(G_t)
         std_deviation = np.std(G_t) if np.std(G_t) > 0 else 1
@@ -136,11 +138,7 @@ class PolicyManager:
             # USES SIMPLE MONTE CARLO
             advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
                     g - baseline_estimate[episode[idx].state.stopid])
-            # advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
-            #    self.G[(idx + 1) % len(self.G)] + self.discount_factor * baseline_estimate[episode[idx].next_state.stopid] - baseline_estimate[episode[idx].state.stopid])
-            # advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
-            #    G_t[(idx + 1) % len(G_t)] + self.discount_factor * baseline_estimate[
-            #    episode[idx].next_state.stopid] - baseline_estimate[episode[idx].state.stopid])
+
             print("Current_g: ", g)
             print("Advantage_Estimate: ", advantage_estimate)
 
@@ -425,61 +423,24 @@ class PolicyManager:
 
                 lowest_distance = legal_next_states_local_search_distance[lowest_state_distance]
                 lowest_distance_weight_utilization = legal_next_states_bin_packing_capacities[lowest_state_distance][0]
-                lowest_distance_volume_utilization = legal_next_states_bin_packing_capacities[lowest_state_distance][1]
 
                 choosen_distance = legal_next_states_local_search_distance[highest_prob_action_space]
-                choosen_weight_utilization = legal_next_states_bin_packing_capacities[highest_prob_action_space][0]
-                choosen_volume_utilization = legal_next_states_bin_packing_capacities[highest_prob_action_space][1]
 
-                #diviation_weight = lowest_distance_weight_utilization - choosen_weight_utilization
                 diviation_distance_highest_utilization = 1 - (lowest_distance / highest_state_capacities_utilization_distance)
                 diviation_distance_choosen = 1 - (lowest_distance / choosen_distance)
 
                 diff_diviation = diviation_distance_highest_utilization - diviation_distance_choosen
 
-                # was 0.0 < 0.1 < 0.2 < 0.3(38.139) < 0.5(36.41)
-                if diff_diviation < 0.5:
-                    #divation_weight_to_max = choosen_weight_utilization / highest_state_capacities_utilization_weight
-                    #if divation_weight_to_max < 0.75:
+                if diff_diviation < self.distance_utilization_threshold:
                     highest_prob_action_space = highest_state_capacities_utilization
 
                 if diviation_distance_highest_utilization > self.local_search_threshold and diviation_distance_choosen > self.local_search_threshold:
                     divation_weight_to_max = lowest_distance_weight_utilization / highest_state_capacities_utilization_weight
-                    if divation_weight_to_max > 0.25: # davor 0.3, davor 0.4, davor 0.5
+                    if divation_weight_to_max > self.capacity_utilization_threshold:
                         highest_prob_action_space = lowest_state_distance
 
                 return highest_prob_action_space, highest_prob
 
-                # if diviation_weight > 0.1:
-                #     # Lower distance might be better
-                #     divation_weight_to_max = lowest_distance_weight_utilization / highest_state_capacities_utilization_weight
-                #     if divation_weight_to_max < 0.5:
-                #         # Highest state capacities might be better
-                #         diviation_distance = lowest_distance / highest_state_capacities_utilization_distance
-                #         variance_factor_distance = 1 - diviation_distance
-                #         if variance_factor_distance > self.local_search_threshold:
-                #             highest_prob_action_space = lowest_state_distance
-                #         else:
-                #             highest_prob_action_space = highest_state_capacities_utilization
-                #     else:
-                #         highest_prob_action_space = lowest_state_distance
-                # else:
-                #     # Choosen might be better
-                #     divation_weight_to_max = choosen_weight_utilization / highest_state_capacities_utilization_weight
-                #     if divation_weight_to_max < 0.5:
-                #         diviation_distance = choosen_distance / highest_state_capacities_utilization_distance
-                #         variance_factor_distance = 1 - diviation_distance
-                #         if variance_factor_distance > self.local_search_threshold:
-                #             highest_prob_action_space = highest_prob_action_space
-                #         else:
-                #             highest_prob_action_space = highest_state_capacities_utilization
-                #     else:
-                #         highest_prob_action_space = highest_prob_action_space
-                #diviation_distance = lowest_distance / choosen_distance
-                #variance_factor_distance = 1 - diviation_distance
-
-                #if variance_factor_distance > self.local_search_threshold or variance_factor_distance < 0:
-                #    highest_prob_action_space = lowest_state_distance
             else:
                 return highest_prob_action_space, highest_prob
 
@@ -497,7 +458,7 @@ class PolicyManager:
             baseline_dict[state_hash] = baseline_value
         return baseline_dict
 
-    def compute_G_t(self, reward_memory, gamma):
+    def compute_G_t(self, reward_memory):
         """
         args
           a list of rewards
