@@ -1,6 +1,8 @@
+import pandas as pd
+
 import src.Tour.TourManager as tManager
 
-from src.Utils.helper import linalg_norm_T
+from src.Utils.helper import calculate_distance
 
 
 class Ant:
@@ -29,7 +31,7 @@ class Ant:
         self.tourVolume = 0.0
         self.tour_complete = False
         self.distance_travelled = 0.0  # kilometers
-        self.microhub_counter = 0
+        self.microhub_counter = 1
         self.discountAlpha = discountAlpha
         self.discountBeta = discountBeta
         self.df_pheromoneMatrix = df_pheromoneMatrix
@@ -99,10 +101,20 @@ class Ant:
             if current_hash == self.microhub_hash:
                 current_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
             if next_hash == self.microhub_hash:
-                next_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter)
+                next_hash = '{}/{}'.format(self.microhub_hash, self.microhub_counter + 1)
+            print(current_hash)
+            print(next_hash)
+            print("-ant is retrieving pheromone-")
+            if '{}/{}'.format(self.microhub_hash, self.microhub_counter) not in self.df_pheromoneMatrix.index.values:
+                print("-ant filled missing microhub in df_pheromoneMatrix-")
+                new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, self.microhub_counter))
+                self.df_pheromoneMatrix = self.df_pheromoneMatrix.append(new_row, ignore_index=False)
+                self.df_pheromoneMatrix['{}/{}'.format(self.microhub_hash, self.microhub_counter)] = 0.0
+                self.df_pheromoneMatrix.fillna(value=0.0, inplace=True)
             df_pheromoneValue = self.df_pheromoneMatrix.at[current_hash, next_hash]
+            print("-ant is looking up distance-")
             distance = float(tManager.getDistanceByMatrix(self.current_stop.hashIdentifier, possible_next_stop.hashIdentifier))
-            stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow((1 / distance if distance else 0),
+            stopAttraction[possible_next_stop] = pow(df_pheromoneValue, self.discountAlpha) * pow(((1 / distance) if distance else 0),
                                                                                                   self.discountBeta)
             total_attraction += stopAttraction[possible_next_stop]
 
@@ -128,6 +140,7 @@ class Ant:
         return struct.unpack('<d', struct.pack('<q', n))[0]
 
     def evaluateWeightChoices(self, choices, total):
+        print('-ant is evaluating weight choices-')
         import random
         from bisect import bisect
         r = random.uniform(0, total)
@@ -161,12 +174,14 @@ class Ant:
         # self.possibleStops.remove(microHub)
 
     def resetTour(self):
+        print('-ant is resetting Tour-')
         self.tour = []
         self.tourOverloaded = 0
         self.tourWeight = 0.0
         self.tourVolume = 0.0
 
     def updateTour(self, newStopToAdd):
+        print('-ant is updating Tour-')
         self.tour.append(newStopToAdd)
         self.tourWeight += newStopToAdd.demandWeight
         self.tourVolume += newStopToAdd.demandVolume
@@ -175,7 +190,7 @@ class Ant:
         self.rmdPossibleStops = []
 
     def updateDistanceTravelled(self, startStop, endStop):
-        self.distance_travelled += float(linalg_norm_T(startStop, endStop))
+        self.distance_travelled += float(calculate_distance(startStop, endStop))
 
     def getTour(self):
         if self.tour_complete:

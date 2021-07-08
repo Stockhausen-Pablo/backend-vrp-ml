@@ -1,17 +1,21 @@
 import csv
+import src.Tour.TourManager as tManager
+
 from timeit import default_timer as timer
 
-import src.Tour.TourManager as tManager
 from argsConfig import getParams
 from src.Aco.AntManager import AntManager
 from src.Mdp.VRPEnvironment import VRPEnvironment
 from src.RL.Policy.PolicyManager import PolicyManager
 from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
-from src.Utils.helper import calculate_delivery_time
+from src.Utils.helper import calculate_tour_meta
 from src.Utils.memoryLoader import create_model_name
-from src.Utils.plotter import plot_episode_stats, plot_baseline_estimate, plotCoordinatesWithCoordinatesLabel, \
-    plotCoordinatesWithStopNrLabel, plotTourWithStopNrLabel
+from src.Utils.plotter import plot_episode_stats,\
+    plot_baseline_estimate,\
+    plot_coordinates_with_coordinates_as_label, \
+    plot_coordinates_with_stopnr__as_label,\
+    plot_tour_with_stopnr_as_label
 
 
 def load_stop_data(data_input):
@@ -26,9 +30,12 @@ def load_stop_data(data_input):
 
 
 def main(args):
+
     # --------------------
     # ARGSPARSE
     # define parameters (the wall of parameters)
+
+    # ML-PARAMETER
     learning_rate = args['learning_rate']
     stay_duration = args['stay_duration']
     discount_factor = args['discount_factor']
@@ -41,32 +48,39 @@ def main(args):
     decreasing_factor = args['decreasing_factor']
     decreasing_factor_good_episode = args['decreasing_factor_good_episode']
     baseline_theta = args['baseline_theta']
+
+    # THRESHOLD PARAMETERS
+    # see argsConfig for help
+    distance_utilization_threshold = args['distance_utilization_threshold']
+    capacity_utilization_threshold = args['capacity_utilization_threshold']
     local_search_threshold = args['local_search_threshold']
     policy_reset_threshold = args['policy_reset_threshold']
-    # aco settings
+
+    # ACO-PARAMETER
     aco_alpha_factor = args['aco_alpha_factor']
     aco_beta_factor = args['aco_beta_factor']
     pheromone_evaporation_coefficient = args['pheromone_evaporation_coefficient']
     pheromone_constant = args['pheromone_constant']
     aco_iterations = args['aco_iterations']
     aco_increasing_factor = args['aco_increasing_factor']
+
     # --------------------
     # INPUT
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    data_input = input("Please specify the data source of the stops to be processed:") or '2021_05_05_TourStop'
+    data_input = input("Please specify the data source of the stops to be processed:") or 'train_data'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
-    microhub_name = input("Please specify the microhub name:") or "PrenzlauerBerg"
-    shipper_name = input("Please specify the shipper name:") or "Landkorb"
-    carrier_name = input("Please specify the carrier name:") or "VeloCarrier"
+    microhub_name = input("Please specify the microhub name:") or "TestHub"
+    shipper_name = input("Please specify the shipper name:") or "TestVersender"
+    carrier_name = input("Please specify the carrier name:") or "TestCarrier"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
-    delivery_date = input("Please specify the delivery date:") or "Test"
+    delivery_date = input("Please specify the delivery date:") or "Tue"
     amount_vehicles = int(input("How many vehicles will be used:") or 2)
-    vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 15)
-    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 180)
-    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 1200)
+    vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 250)
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 700)
 
     # --------------------
     # SETTING UP TOUR MANAGER
@@ -80,8 +94,8 @@ def main(args):
     # --------------------
     # PLOT COORDINATES
     # overview of problem space (input)
-    plotCoordinatesWithCoordinatesLabel()
-    plotCoordinatesWithStopNrLabel()
+    plot_coordinates_with_coordinates_as_label()
+    plot_coordinates_with_stopnr__as_label()
 
     if args['train']:
         # --------------------TRAINING MODE--------------------
@@ -147,6 +161,8 @@ def main(args):
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
                                       baseline_theta,
+                                      distance_utilization_threshold,
+                                      capacity_utilization_threshold,
                                       local_search_threshold,
                                       policy_reset_threshold
                                       )
@@ -191,7 +207,7 @@ def main(args):
         # --------------------
         # PLOTTING TRAINING RESULTS
         plot_episode_stats(episodeStatistics, smoothing_window=25)
-        plotTourWithStopNrLabel(final_tours)
+        plot_tour_with_stopnr_as_label(final_tours)
         current_baseline = policyManager.get_current_baseline_as_dict()
         plot_baseline_estimate(current_baseline)
 
@@ -238,8 +254,11 @@ def main(args):
                                       decreasing_factor,
                                       decreasing_factor_good_episode,
                                       baseline_theta,
+                                      distance_utilization_threshold,
+                                      capacity_utilization_threshold,
                                       local_search_threshold,
-                                      policy_reset_threshold)
+                                      policy_reset_threshold
+                                      )
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL
@@ -273,7 +292,9 @@ def main(args):
         mean_volume = total_volume / len(final_tours)
         mean_weight = total_weight / len(final_tours)
         
-        total_time, total_distance, average_time_per_tour = calculate_delivery_time(vehicle_speed, stay_duration, final_tours)
+        #total_time, total_distance, average_time_per_tour = calculate_delivery_time(vehicle_speed, stay_duration, final_tours)
+        total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_tour_meta(
+            vehicle_speed, stay_duration, final_tours)
 
         print("Stop Amount: ", len(tManager.getListOfStops()))
         print("TESTING RUN TIME in s: ", (testing_end - testing_start))
@@ -290,7 +311,7 @@ def main(args):
 
         # --------------------
         # PLOTTING TOUR (UNNECESSARY IN PRODUCTION)
-        plotTourWithStopNrLabel(final_tours)
+        plot_tour_with_stopnr_as_label(final_tours)
 
 
 if __name__ == "__main__":
