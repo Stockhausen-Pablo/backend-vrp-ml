@@ -2,31 +2,19 @@ import numpy as np
 import math
 
 
-def calculate_delivery_time(vehicle_speed, stay_duration, final_tours):
+def calculate_tour_meta(vehicle_speed, stay_duration, final_tours):
+    """
+    Calculates the tour meta data for the constructed tours.
+    ----------
+    Returns the total time and distance required for all tours aswell as the mean values.
+    """
     total_time = 0.0
     total_distance = 0.0
     for tour in final_tours:
         for idx, stop in enumerate(tour):
             current_stop = stop
             next_stop = tour[(idx + 1) % len(tour)]
-            distance = linalg_norm_T(current_stop, next_stop)
-            time_estimated = ((distance / vehicle_speed) * 60) + stay_duration if distance > 0.0 else 0.0
-            total_time += time_estimated
-            total_distance += distance
-
-    average_time_per_tour = total_time / len(final_tours)
-
-    return total_time, total_distance, average_time_per_tour
-
-
-def calculate_meta_for_za_tour(vehicle_speed, stay_duration, final_tours):
-    total_time = 0.0
-    total_distance = 0.0
-    for tour in final_tours:
-        for idx, stop in enumerate(tour):
-            current_stop = stop
-            next_stop = tour[(idx + 1) % len(tour)]
-            distance = linalg_norm_T(current_stop, next_stop)
+            distance = calculate_distance(current_stop, next_stop)
             time_estimated = ((distance / vehicle_speed) * 60) + stay_duration if distance > 0.0 else 0.0
             total_time += time_estimated
             total_distance += distance
@@ -37,8 +25,10 @@ def calculate_meta_for_za_tour(vehicle_speed, stay_duration, final_tours):
     return total_time, total_distance, average_time_per_tour, average_distance_per_tour
 
 
-def linalg_norm_T(startStop, endStop):
-    # haversine formula
+def calculate_distance(startStop, endStop):
+    """
+    Calculates the distance between two coordinates following the Haversine Formula.
+    """
     R = 6373.0
     lat1 = math.radians(startStop.latitude)
     lon1 = math.radians(startStop.longitude)
@@ -48,18 +38,18 @@ def linalg_norm_T(startStop, endStop):
     dlon = lon2 - lon1
     dlat = lat2 - lat1
 
-    a = math.sin(dlat / 2) * math.sin(dlat/2) + math.sin(dlon/2) * math.sin(dlon/2) * math.cos(lat1) * math.cos(lat2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    distance = R*c
+    a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.sin(dlon / 2) * math.sin(dlon / 2) * math.cos(lat1) * math.cos(
+        lat2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    distance = R * c
     distance_approximation = distance * np.sqrt(2)
     return distance_approximation
 
 
-def rectified(x):
-    return max(0.0, x)
-
-
 def normalize_list(probList):
+    """
+    Normalizes a given list, that way the sum of all values sum up to 1.
+    """
     if min(probList) == 0.0 and max(probList) == 0.0:
         probList += 1 / len(probList)
         return probList
@@ -67,7 +57,7 @@ def normalize_list(probList):
     normRow = [float(i) / s for i in probList]
     return normRow
 
-
+# Not being used.
 def normalize_df(df):
     for row in df:
         toNormalizeRow = df[row].to_numpy()
@@ -77,17 +67,33 @@ def normalize_df(df):
     return df
 
 
-def activationBySoftmax(X):
+def activation_by_softmax(X):
+    """
+    Compute the softmax of each element along an axis of X.
+    Parameters
+    ----------
+    Returns an array the same size as X. The result will sum to 1
+    along the specified axis.
+    """
+
     z = np.exp(np.array((X - max(X)), float))
     y = np.sum(z)
+
     return z / y
 
 
-def softmaxDict(X):
-    toSoftmaxSeries = X.copy()
-    for state_hash, prob in toSoftmaxSeries.items():
-        toSoftmaxSeries[state_hash] = prob
-    z = np.exp(np.array((toSoftmaxSeries - max(toSoftmaxSeries)), float))
+def action_by_softmax_as_dict(X):
+    """
+    Compute the softmax of each element along an axis of X.
+    Parameters
+    ----------
+    Returns an dict the same size as X with (hashIdentifier-value)-pairs. The result will sum to 1
+    along the specified axis.
+    """
+    to_softmax_series = X.copy()
+    for state_hash, prob in to_softmax_series.items():
+        to_softmax_series[state_hash] = prob
+    z = np.exp(np.array((to_softmax_series - max(to_softmax_series)), float))
     y = np.sum(z)
     softmax_arr = z / y
     softmax_dict = dict()
@@ -96,45 +102,3 @@ def softmaxDict(X):
         softmax_dict[state_hash] = softmax_arr[counter]
         counter += 1
     return softmax_dict
-
-
-def softmax(X, theta=1.0, axis=None):
-    """
-    Compute the softmax of each element along an axis of X.
-    Parameters
-    ----------
-    X: ND-Array. Probably should be floats.
-    theta (optional): float parameter, used as a multiplier
-        prior to exponentiation. Default = 1.0
-    axis (optional): axis to compute values along. Default is the
-        first non-singleton axis.
-    Returns an array the same size as X. The result will sum to 1
-    along the specified axis.
-    """
-
-    # make X at least 2d
-    y = np.atleast_2d(X)
-
-    # find axis
-    if axis is None:
-        axis = next(j[0] for j in enumerate(y.shape) if j[1] > 1)
-
-    # multiply y against the theta parameter,
-    y = y * float(theta)
-
-    # subtract the max for numerical stability
-    y = y - np.expand_dims(np.max(y, axis=axis), axis)
-
-    # exponentiate y
-    y = np.exp(y)
-
-    # take the sum along the specified axis
-    ax_sum = np.expand_dims(np.sum(y, axis=axis), axis)
-
-    # finally: divide elementwise
-    p = y / ax_sum
-
-    # flatten if X was 1D
-    if len(X.shape) == 1: p = p.flatten()
-
-    return p

@@ -5,7 +5,9 @@ import json
 def load_memory_df_from_local(pickle_name, state_hashes, microhub_hash):
     try:
         df_pickle = pd.read_pickle(pickle_name)
+        print("Found Pickle with name: ", pickle_name)
         if df_pickle.empty:
+            print("Creating new Pickle file")
             df_pickle = pd.DataFrame(index=state_hashes[1:], columns=state_hashes[1:])
             new_row = pd.Series(name='{}/{}'.format(microhub_hash, 0))
             df_pickle = df_pickle.append(new_row, ignore_index=False)
@@ -24,8 +26,8 @@ def load_memory_df_from_local(pickle_name, state_hashes, microhub_hash):
             return df_pickle
     except Exception as ex:
         print('Exception occurred '+str(ex))
-        print("-No Pickle file to load from-")
-        print("-Creating new Pickle file-")
+        print("No Pickle file to load from")
+        print("Creating new Pickle file")
         df_new_pickle = pd.DataFrame(index=state_hashes[1:], columns=state_hashes[1:])
         new_row = pd.Series(name='{}/{}'.format(microhub_hash, 0))
         df_new_pickle = df_new_pickle.append(new_row, ignore_index=False)

@@ -5,7 +5,7 @@ with open('README.rst') as f:
     readme = f.read()
 
 with open('LICENSE') as f:
-    license = f.read()
+    usage_license = f.read()
 
 setup(
     name='vrp-rl',
@@ -13,8 +13,8 @@ setup(
     description='Reinforcement Learning by using a MDP/REINFORCE to solve CVRP',
     long_description=readme,
     author='Pablo Stockhausen',
-    author_email='stockhap@th-brandenbug.de',
+    author_email='stockhausen017@gmail.com',
     url='https://github.com/Stockhausen-Pablo/vrp-rl',
-    license=license,
+    license=usage_license,
     packages=find_packages(exclude=('tests', 'docs'))
 )

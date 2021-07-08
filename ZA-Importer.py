@@ -1,7 +1,5 @@
-from src.Utils.helper import calculate_meta_for_za_tour
-import pandas as pd
+from src.Utils.helper import calculate_tour_meta
 import json
-from datetime import datetime
 
 
 class SimpleStop(object):
@@ -25,8 +23,11 @@ print("-Specification of the file name-")
 print("-The relevant data are located in the folder data/constructed_tours_by_za-")
 data_set = input("Please enter the name of the file:") or '2021_05_04_za_tours'
 vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
-stay_duration = int(input("How long is the stay duration per Stopp: ") or 5)
+stay_duration = int(input("How long is the stay duration per Stop: ") or 5)
 
+# --------------------
+# SET MICROHUB AS FIRST STOP
+# Defined longitude/latitude manually
 microhub = make_simple_stop(13.43599, 52.53973000000001, 0)
 
 print("Trying to open the file...")
@@ -35,11 +36,14 @@ with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
     za_tours = json.load(file)
     all_tours = []
     stop_counter = 0
-    # stopIdentifier,stopNr,Longitude,Latitude,DemandWeight,DemandVolume,BoxAmount
+
+    # --------------------
+    # IMPORT TOUR-DATA FROM ZA-SYSTEM
     for za_tour in za_tours:
         tour = []
         for stop in za_tour.get('stops'):
             stop_counter += 1
+            # stopIdentifier,stopNr,Longitude,Latitude,DemandWeight,DemandVolume,BoxAmount
             current_stop = make_simple_stop(stop.get('address').get('longitude'), stop.get('address').get('latitude'), stop.get('tourStopId'))
             tour.append(current_stop)
         all_tours.append(tour)
@@ -51,7 +55,9 @@ with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:
 
     stop_counter += 1
 
-    total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_meta_for_za_tour(
+    # --------------------
+    # CALCULATE TOUR-META FOR ZA-SOLUTION
+    total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_tour_meta(
         vehicle_speed, stay_duration, all_tours)
     for tour in all_tours:
         for stop in tour:

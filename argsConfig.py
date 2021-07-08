@@ -1,4 +1,3 @@
-# Import the argparse library
 import argparse
 
 
@@ -7,22 +6,25 @@ def getParams():
     argsParser = argparse.ArgumentParser(
         description='Reinforcement Learning by using a MDP/REINFORCE to solve CVRP')
 
-    # Add arguments
-    # ------------------
-    # Convert
-    argsParser.add_argument('--convert', default=False, action='store_true', help='entering convert mode')
+    # --------------------
+    # CONVERT MODE
+    # Currently not used
+    # argsParser.add_argument('--convert', default=False, action='store_true', help='entering convert mode')
 
-    # Training
+    # --------------------
+    # TRAINING
     argsParser.add_argument('--train', default=False, action='store_true', help='entering training mode')
     argsParser.add_argument('--num_episodes', default=115, type=int,
                             help="Define number of episodes for the training process")
     argsParser.add_argument('--max_steps', default=10000, type=int,
                             help="Define the number of maximal steps that can be taking for the training process")
 
-    # Testing
+    # --------------------
+    # TESTING
     argsParser.add_argument('--test', default=False, action='store_true', help="entering test mode")
 
-    # Agent
+    # --------------------
+    # ML-AGENT
     argsParser.add_argument('--agent', default='policy_gradient_agent', help="Use the Policy Gradient Agent")
 
     argsParser.add_argument('--stay_duration', default=5.0, type=float,
@@ -67,7 +69,8 @@ def getParams():
     argsParser.add_argument('--policy_reset_threshold', default=-1, type=float, # davor -7, davor -1
                             help="Define the threshold to reset policies.")
 
-    # ACO
+    # --------------------
+    # ACO-SETTINGS
     argsParser.add_argument('--aco_alpha_factor', default=0.5, type=float,
                             help="Define discount alpha for aco")
     argsParser.add_argument('--aco_beta_factor', default=1.2, type=float,
@@ -85,7 +88,7 @@ def getParams():
     args = argsParser.parse_args()
     args = vars(args)
 
-    #output
+    # Output current args
     print(' '.join(f'{k}={v}\n' for k, v in sorted(args.items())))
 
     return args

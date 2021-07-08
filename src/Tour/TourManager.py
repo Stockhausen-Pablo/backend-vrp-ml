@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 
 from src.Tour.Stop import Stop
-from src.Utils.helper import linalg_norm_T
+from src.Utils.helper import calculate_distance
 
 stops: List[Stop] = []
 
@@ -42,7 +42,7 @@ def getLength() -> int:
 def calculateDistanceMatrix() -> None:
     for stop_i in stops:
         for stop_j in stops:
-            distance_i_j = linalg_norm_T(stop_i, stop_j)
+            distance_i_j = calculate_distance(stop_i, stop_j)
             distanceMatrix.at[stop_i.hashIdentifier, stop_j.hashIdentifier] = distance_i_j
 
 

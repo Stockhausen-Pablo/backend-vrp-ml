@@ -2,7 +2,7 @@ import pandas as pd
 
 import src.Tour.TourManager as tManager
 
-from src.Utils.helper import linalg_norm_T
+from src.Utils.helper import calculate_distance
 
 
 class Ant:
@@ -190,7 +190,7 @@ class Ant:
         self.rmdPossibleStops = []
 
     def updateDistanceTravelled(self, startStop, endStop):
-        self.distance_travelled += float(linalg_norm_T(startStop, endStop))
+        self.distance_travelled += float(calculate_distance(startStop, endStop))
 
     def getTour(self):
         if self.tour_complete:

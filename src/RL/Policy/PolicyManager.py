@@ -1,10 +1,9 @@
-import math
 import random
 
 import numpy as np
 import pandas as pd
 
-from src.Utils.helper import activationBySoftmax, normalize_list, softmaxDict
+from src.Utils.helper import normalize_list, action_by_softmax_as_dict
 from src.Utils.memoryLoader import load_memory_df_from_local, save_memory_df_to_local
 import keras.backend as K  # dont remove
 
@@ -125,7 +124,7 @@ class PolicyManager:
             # VALUE FUNCTION (Policy Evaluation)
             # Get possible lowest reward | goal to minimize reward (as lowest distance)
             # earned_reward = episode[idx].reward
-            softmax_weights = softmaxDict(self.policy_action_space.loc[state_hash, :])
+            softmax_weights = action_by_softmax_as_dict(self.policy_action_space.loc[state_hash, :])
             baseline_estimate = self.calculate_value_func(env,
                                                           episode[idx],
                                                           softmax_weights,
