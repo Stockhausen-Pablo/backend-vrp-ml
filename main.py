@@ -23,10 +23,10 @@ def load_stop_data(data_input):
         csv_reader = csv.reader(file)
         next(csv_reader, None)
         for row in csv_reader:
-            tManager.addStop(
+            tManager.add_stop(
                 Stop(str(row[0]), int(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]), int(row[6]), int(row[7])))
-    tManager.calculateDistanceMatrix()
-    tManager.initCapacityDemands()
+    tManager.calculate_distance_matrix()
+    tManager.init_capacity_demands()
 
 
 def main(args):
@@ -89,7 +89,7 @@ def main(args):
     load_stop_data(data_input)
 
     # Setup Distance Matrix for later use
-    distance_matrix = tManager.getDistances()
+    distance_matrix = tManager.get_distances()
 
     # --------------------
     # PLOT COORDINATES
@@ -106,13 +106,13 @@ def main(args):
         # setting up and running ACO
         print("-Starting up Ant Colony Optimization to get Probability Matrix-")
         antManager = AntManager(
-            stops=tManager.getListOfStops(),
-            start_stop=tManager.getStop(0),
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume,
+            stops=tManager.get_list_of_stops(),
+            start_stop=tManager.get_stop(0),
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume,
             vehicleCount=amount_vehicles,
-            discountAlpha=aco_alpha_factor,
-            discountBeta=aco_beta_factor,
+            discount_alpha=aco_alpha_factor,
+            discount_beta=aco_beta_factor,
             pheromone_evaporation_coefficient=pheromone_evaporation_coefficient,
             pheromone_constant=pheromone_constant,
             iterations=aco_iterations
@@ -122,7 +122,7 @@ def main(args):
         # RUN ACO
         # retrieving solution from ACO and preparing further transformation
         aco_start = timer()
-        resultACO = antManager.runACO()
+        resultACO = antManager.run_aco()
         aco_end = timer()
 
         # --------------------
@@ -136,15 +136,15 @@ def main(args):
         # setting up MDP-Environment
         print('SETTING UP ENVIRONMENT')
         environment = VRPEnvironment(
-            states=tManager.getListOfStops(),
+            states=tManager.get_list_of_stops(),
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
             distanceMatrix=distance_matrix,
-            microHub=tManager.getMicrohub(),
-            capacityDemands=tManager.getCapacityDemands(),
+            microHub=tManager.get_microhub(),
+            capacityDemands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
             vehicleWeight=capacity_weight,
             vehicleVolume=capacity_volume
@@ -229,15 +229,15 @@ def main(args):
         # ENVIRONMENT
         # setting up MDP-Environment
         environment = VRPEnvironment(
-            states=tManager.getListOfStops(),
+            states=tManager.get_list_of_stops(),
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
             distanceMatrix=distance_matrix,
-            microHub=tManager.getMicrohub(),
-            capacityDemands=tManager.getCapacityDemands(),
+            microHub=tManager.get_microhub(),
+            capacityDemands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
             vehicleWeight=capacity_weight,
             vehicleVolume=capacity_volume
@@ -284,9 +284,9 @@ def main(args):
 
         for tour in final_tours:
             for stop in tour:
-                total_box_amount += stop.boxAmount
-                total_weight += stop.demandWeight
-                total_volume += stop.demandVolume
+                total_box_amount += stop.box_amount
+                total_weight += stop.demand_weight
+                total_volume += stop.demand_volume
 
         mean_box_amount = total_box_amount/len(final_tours)
         mean_volume = total_volume / len(final_tours)
@@ -296,7 +296,7 @@ def main(args):
         total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_tour_meta(
             vehicle_speed, stay_duration, final_tours)
 
-        print("Stop Amount: ", len(tManager.getListOfStops()))
+        print("Stop Amount: ", len(tManager.get_list_of_stops()))
         print("TESTING RUN TIME in s: ", (testing_end - testing_start))
         print("Amount of constructed Tours: ", len(final_tours))
         print("Mean Box Amount per Tour: ", mean_box_amount)

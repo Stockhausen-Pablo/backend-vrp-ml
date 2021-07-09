@@ -130,13 +130,13 @@ class PolicyManager:
                                                           softmax_weights,
                                                           gamma,
                                                           episode[idx].microhub_counter)
-            print("Relevant_Baseline_Estimate: ", baseline_estimate[episode[idx].state.stopid])
+            print("Relevant_Baseline_Estimate: ", baseline_estimate[episode[idx].state.stop_id])
 
             # --------------------
             # ADVANTAGE / APPLY TEMPORAL DIFFERENCE ERROR
             # USES SIMPLE MONTE CARLO
-            advantage_estimate = baseline_estimate[episode[idx].state.stopid] + self.learning_rate * (
-                    g - baseline_estimate[episode[idx].state.stopid])
+            advantage_estimate = baseline_estimate[episode[idx].state.stop_id] + self.learning_rate * (
+                    g - baseline_estimate[episode[idx].state.stop_id])
 
             print("Current_g: ", g)
             print("Advantage_Estimate: ", advantage_estimate)
@@ -164,7 +164,7 @@ class PolicyManager:
             value_weight = clip_weight(value_weight, 0.0001)
             print("Current_value_weight: ", value_weight)
 
-            value_weight_new = value_weight + (lr * gamma_t * (baseline_estimate[episode[idx].next_state.stopid]))
+            value_weight_new = value_weight + (lr * gamma_t * (baseline_estimate[episode[idx].next_state.stop_id]))
             value_weight_new = clip_weight(value_weight_new, 0.0001)
             print("Current_value_weight_new: ", value_weight_new)
 
@@ -283,14 +283,14 @@ class PolicyManager:
         return policy_reward, allTours
 
     def handle_multiple_tours(self, state, next_state, microhub_counter):
-        if state.hashIdentifier == self.microhub_hash:
-            state_hash = '{}/{}'.format(state.hashIdentifier, microhub_counter)
+        if state.hash_id == self.microhub_hash:
+            state_hash = '{}/{}'.format(state.hash_id, microhub_counter)
         else:
-            state_hash = state.hashIdentifier
-        if next_state.hashIdentifier == self.microhub_hash:
-            next_state_hash = '{}/{}'.format(next_state.hashIdentifier, microhub_counter)
+            state_hash = state.hash_id
+        if next_state.hash_id == self.microhub_hash:
+            next_state_hash = '{}/{}'.format(next_state.hash_id, microhub_counter)
         else:
-            next_state_hash = next_state.hashIdentifier
+            next_state_hash = next_state.hash_id
 
         return state_hash, next_state_hash
 
@@ -305,14 +305,14 @@ class PolicyManager:
                     s_next = env.getStateByHash(s_n)
                     pi_s_a = 1
                     p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
-                    r = env.reward_func_hash(s_a_stop.hashIdentifier, s_n)
+                    r = env.reward_func_hash(s_a_stop.hash_id, s_n)
                     # v[s_next.stopid] = r + gamma * (p * self.baseline_estimate[s_next.stopid])
-                    v[s_next.stopid] = p * (r + gamma * self.baseline_estimate[s_next.stopid])
+                    v[s_next.stop_id] = p * (r + gamma * self.baseline_estimate[s_next.stop_id])
                     # if (s_next.hashIdentifier == self.microhub_hash):
                     #    v[s_next.stopid] *= self.microhub_counter
-                self.baseline_estimate[s_a_stop.stopid] = np.sum(v)
+                self.baseline_estimate[s_a_stop.stop_id] = np.sum(v)
                 delta = np.maximum(delta,
-                                   np.absolute(old_values[s_a_stop.stopid]) - self.baseline_estimate[s_a_stop.stopid])
+                                   np.absolute(old_values[s_a_stop.stop_id]) - self.baseline_estimate[s_a_stop.stop_id])
             if delta < theta:
                 break
         return self.baseline_estimate
@@ -348,14 +348,14 @@ class PolicyManager:
         return K.mean(-log_lik * advantages)
 
     def get_action_space_by_policy(self, state, legal_next_states, policy, microhub_counter):
-        if state.hashIdentifier == self.microhub_hash:
+        if state.hash_id == self.microhub_hash:
             self.policy_action_space.fillna(value=0.05, inplace=True)
             if '{}/{}'.format(self.microhub_hash, microhub_counter) not in self.policy_action_space.index.values:
                 new_row = pd.Series(name='{}/{}'.format(self.microhub_hash, microhub_counter))
                 self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
                 self.policy_action_space.fillna(value=0.05, inplace=True)
                 self.policy_action_space['{}/{}'.format(self.microhub_hash, microhub_counter)] = 1 / len(self.state_hashes)
-            action_space_prob = policy.loc['{}/{}'.format(state.hashIdentifier, microhub_counter), legal_next_states].to_numpy()
+            action_space_prob = policy.loc['{}/{}'.format(state.hash_id, microhub_counter), legal_next_states].to_numpy()
         else:
             if len(legal_next_states) == 1:
                 if legal_next_states[0] not in self.policy_action_space.index.values:
@@ -363,7 +363,7 @@ class PolicyManager:
                     self.policy_action_space = self.policy_action_space.append(new_row, ignore_index=False)
                     self.policy_action_space.fillna(value=0.05, inplace=True)
                     self.policy_action_space[legal_next_states[0]] = 1 / len(self.state_hashes)
-            action_space_prob = policy.loc[state.hashIdentifier, legal_next_states].to_numpy()
+            action_space_prob = policy.loc[state.hash_id, legal_next_states].to_numpy()
         highest_prob = max(action_space_prob)
         index_highest_prob = np.where(action_space_prob == highest_prob)[0]
         index = index_highest_prob[0]
@@ -390,11 +390,11 @@ class PolicyManager:
             highest_prob_action_space = random.choice(legal_next_states)
             return highest_prob_action_space, 1
         else:
-            if state.hashIdentifier == self.microhub_hash:
+            if state.hash_id == self.microhub_hash:
                 action_space_prob = self.policy_action_space.loc[
-                    '{}/{}'.format(state.hashIdentifier, self.microhub_counter), legal_next_states].to_numpy()
+                    '{}/{}'.format(state.hash_id, self.microhub_counter), legal_next_states].to_numpy()
             else:
-                action_space_prob = self.policy_action_space.loc[state.hashIdentifier, legal_next_states].to_numpy()
+                action_space_prob = self.policy_action_space.loc[state.hash_id, legal_next_states].to_numpy()
             # softmax_space_prob = activationBySoftmax(action_space_prob) if len(legal_next_states) > 1 else [1.0]
             normalized_action_space_prob = normalize_list(action_space_prob) if len(legal_next_states) > 1 else [1.0]
             # highest_prob_action_space_nr = np.random.choice(len(legal_next_states), p=softmax_space_prob)
@@ -444,7 +444,7 @@ class PolicyManager:
                 return highest_prob_action_space, highest_prob
 
     def get_action(self, state):
-        action_prob = self.policy_action.loc[state.hashIdentifier].to_numpy()
+        action_prob = self.policy_action.loc[state.hash_id].to_numpy()
         highest_prob_action = np.random.choice(np.arange(len(action_prob)), p=action_prob)
         return highest_prob_action, action_prob[highest_prob_action]
 

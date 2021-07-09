@@ -98,11 +98,11 @@ class VRPEnvironment:
     def updateTourMeta(self, next_state):
         self.possibleStops.remove(next_state)
         self.current_tour.append(next_state)
-        self.current_tour_weight += next_state.demandWeight
-        self.current_tour_volume += next_state.demandVolume
+        self.current_tour_weight += next_state.demand_weight
+        self.current_tour_volume += next_state.demand_volume
 
     def reward_func(self, current_stop, next_stop):
-        reward = self.distanceMatrix.at[current_stop.hashIdentifier, next_stop.hashIdentifier]
+        reward = self.distanceMatrix.at[current_stop.hash_id, next_stop.hash_id]
         return reward
 
     def reward_func_hash(self, current_stop, next_stop):
@@ -115,13 +115,13 @@ class VRPEnvironment:
         return self.microHub
 
     def get_microhub_hash(self):
-        return self.microHub.hashIdentifier
+        return self.microHub.hash_id
 
     def getStateByHash(self, hashIdentifier):
-        return next((state for state in self.states if state.hashIdentifier == hashIdentifier), None)
+        return next((state for state in self.states if state.hash_id == hashIdentifier), None)
 
     def getStateHashes(self):
-        return [state.hashIdentifier for state in self.states]
+        return [state.hash_id for state in self.states]
 
     def possible_rewards(self, state, action_space_list):
         possible_rewards = self.distanceMatrix.loc[state, action_space_list]
@@ -133,17 +133,17 @@ class VRPEnvironment:
         legal_next_states_local_search_distance = dict()
         legal_next_states_bin_packing_capacities = dict()
         for stop in self.possibleStops:
-            possible_tour_weight = float(stop.demandWeight) + self.current_tour_weight
-            possible_tour_volume = float(stop.demandVolume) + self.current_tour_volume
+            possible_tour_weight = float(stop.demand_weight) + self.current_tour_weight
+            possible_tour_volume = float(stop.demand_volume) + self.current_tour_volume
             if possible_tour_weight <= self.vehicleWeight and possible_tour_volume <= self.vehicleVolume:
-                if stop.hashIdentifier == self.microHub.hashIdentifier:
+                if stop.hash_id == self.microHub.hash_id:
                     continue
                 else:
-                    legal_next_states.append(stop.hashIdentifier)
-                    legal_next_states_hubs_ignored.append(stop.hashIdentifier)
-                    legal_next_states_local_search_distance[stop.hashIdentifier] = self.reward_func(
+                    legal_next_states.append(stop.hash_id)
+                    legal_next_states_hubs_ignored.append(stop.hash_id)
+                    legal_next_states_local_search_distance[stop.hash_id] = self.reward_func(
                         self.current_state, stop)
-                    legal_next_states_bin_packing_capacities[stop.hashIdentifier] = [
+                    legal_next_states_bin_packing_capacities[stop.hash_id] = [
                         possible_tour_weight / self.vehicleWeight, possible_tour_volume / self.vehicleVolume]
 
         legal_next_states_local_search_distance = {k: v for k, v in
@@ -159,8 +159,8 @@ class VRPEnvironment:
 
         if not legal_next_states and not self.possibleStops:
             microhub_counter = self.microhub_counter + 1
-            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, microhub_counter))
-            legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
+            legal_next_states.append('{}/{}'.format(self.microHub.hash_id, microhub_counter))
+            legal_next_states_hubs_ignored.append(self.microHub.hash_id)
             action = 2
             self.microhub_counter += 1
             # shuffle(legal_next_states)
@@ -168,8 +168,8 @@ class VRPEnvironment:
 
         if not legal_next_states and self.possibleStops:
             microhub_counter = self.microhub_counter + 1
-            legal_next_states.append('{}/{}'.format(self.microHub.hashIdentifier, microhub_counter))
-            legal_next_states_hubs_ignored.append(self.microHub.hashIdentifier)
+            legal_next_states.append('{}/{}'.format(self.microHub.hash_id, microhub_counter))
+            legal_next_states_hubs_ignored.append(self.microHub.hash_id)
             action = 0
             self.microhub_counter += 1
             return action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, self.microhub_counter
