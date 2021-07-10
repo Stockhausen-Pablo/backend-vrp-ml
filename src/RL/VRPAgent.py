@@ -26,7 +26,7 @@ class VRPAgent:
         # --------------------
         # GIVEN INSTANCES
         self.env = env
-        self.policyManager = policy_manager
+        self.policy_manager = policy_manager
 
         # --------------------
         # SETTINGS
@@ -67,14 +67,14 @@ class VRPAgent:
         """
         for epoch in range(self.num_episodes):
             self.run_episode(epoch)
-            G_t, J_avR, loseHistory, eps, policy_reward = self.policyManager.policy_update_by_learning(self.env,
-                                                                                                       self.episode,
-                                                                                                       self.episode_statistics.episode_rewards[
+            G_t, J_avR, loseHistory, eps, policy_reward = self.policy_manager.policy_update_by_learning(self.env,
+                                                                                                        self.episode,
+                                                                                                        self.episode_statistics.episode_rewards[
                                                                                                            epoch],
-                                                                                                       self.gamma,
-                                                                                                       self.max_steps,
-                                                                                                       self.num_episodes,
-                                                                                                       epoch)
+                                                                                                        self.gamma,
+                                                                                                        self.max_steps,
+                                                                                                        self.num_episodes,
+                                                                                                        epoch)
 
             # Update Meta information
             self.episode_statistics.episode_G_t[epoch] = sum(G_t)
@@ -90,7 +90,7 @@ class VRPAgent:
             len(self.episode_statistics.episode_policy_reward) - 1]
 
         return self.episode_statistics, \
-               self.policyManager.policy_action_space, \
+               self.policy_manager.policy_action_space, \
                best_policy_reward, \
                worst_policy_reward, \
                last_policy_reward
@@ -170,12 +170,12 @@ class VRPAgent:
 
             # --------------------
             # CHOOSE ACTION SPACE
-            action_space, action_space_prob = self.policyManager.get_action_space(self.eps,
-                                                                                  state,
-                                                                                  legal_next_states,
-                                                                                  legal_next_states_local_search_distance,
-                                                                                  legal_next_states_bin_packing_capacities,
-                                                                                  microhub_counter)
+            action_space, action_space_prob = self.policy_manager.get_action_space(self.eps,
+                                                                                   state,
+                                                                                   legal_next_states,
+                                                                                   legal_next_states_local_search_distance,
+                                                                                   legal_next_states_bin_packing_capacities,
+                                                                                   microhub_counter)
 
             # --------------------
             # DO STEP IN ENVIRONMENT

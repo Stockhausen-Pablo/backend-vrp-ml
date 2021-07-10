@@ -69,18 +69,18 @@ def main(args):
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    data_input = input("Please specify the data source of the stops to be processed:") or 'train_data'
+    data_input = input("Please specify the data source of the stops to be processed:") or 'short_train_data'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
     microhub_name = input("Please specify the microhub name:") or "TestHub"
     shipper_name = input("Please specify the shipper name:") or "TestVersender"
     carrier_name = input("Please specify the carrier name:") or "TestCarrier"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
-    delivery_date = input("Please specify the delivery date:") or "Tue"
+    delivery_date = input("Please specify the delivery date:") or "Test"
     amount_vehicles = int(input("How many vehicles will be used:") or 2)
     vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
-    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 250)
-    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 700)
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 180)
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 500)
 
     # --------------------
     # SETTING UP TOUR MANAGER
