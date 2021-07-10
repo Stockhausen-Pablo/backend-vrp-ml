@@ -180,7 +180,7 @@ class VRPAgent:
             # --------------------
             # DO STEP IN ENVIRONMENT
             # follow policy
-            next_state, reward, done, currentTour, currentTours = self.observe_transition(legal_next_action,
+            next_state, reward, done, current_tour, current_tours = self.observe_transition(legal_next_action,
                                                                                           action_space)
 
             # --------------------
@@ -193,7 +193,7 @@ class VRPAgent:
             # UPDATE EPISODE STATISTICS
             self.episode_statistics.episode_rewards[epoch] += reward
             self.episode_statistics.episode_lengths[epoch] = step_t
-            self.episode_statistics.episode_tours[epoch] = currentTours
+            self.episode_statistics.episode_tours[epoch] = current_tours
 
             # --------------------
             # PRINT EPOCH PROGRESS
