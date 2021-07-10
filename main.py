@@ -183,7 +183,7 @@ def main(args):
         # AGENT
         print('SETTING UP AGENT')
         agent = VRPAgent(env=environment,
-                         policyManager=policyManager,
+                         policy_manager=policyManager,
                          num_episodes=num_episodes,
                          max_steps=max_steps,
                          discount_factor=discount_factor
