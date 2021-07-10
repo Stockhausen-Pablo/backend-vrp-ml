@@ -103,7 +103,7 @@ class VRPAgent:
         return self.env.possible_rewards(state, action_space_list)
 
     def getLegalAction(self):
-        return self.env.getLegalAction()
+        return self.env.get_next_legal_action()
 
     def observeTransition(self, action, action_space):
         return self.env.step(action, action_space)

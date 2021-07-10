@@ -264,7 +264,7 @@ class PolicyManager:
         tour.append(state)
         for step_t in range(max_steps):
             print("constructing policy: get legal next states")
-            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, microhub_counter = env.getLegalAction()
+            legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, microhub_counter = env.get_next_legal_action()
             print("constructing policy: getting action space")
             action_space = self.get_action_space_by_policy(state, legal_next_states, policy, microhub_counter)
             print("constructing policy: doing step")
@@ -299,10 +299,10 @@ class PolicyManager:
             delta = 0.0
             old_values = np.copy(self.baseline_estimate)
             for s_a in self.state_hashes:
-                s_a_stop = env.getStateByHash(s_a)
+                s_a_stop = env.get_state_by_hash(s_a)
                 v = np.zeros_like(self.state_hashes, dtype=np.float32)
                 for s_n in self.state_hashes:
-                    s_next = env.getStateByHash(s_n)
+                    s_next = env.get_state_by_hash(s_n)
                     pi_s_a = 1
                     p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
                     r = env.reward_func_hash(s_a_stop.hash_id, s_n)

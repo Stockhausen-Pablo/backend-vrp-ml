@@ -142,17 +142,17 @@ def main(args):
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
-            distanceMatrix=distance_matrix,
-            microHub=tManager.get_microhub(),
-            capacityDemands=tManager.get_capacity_demands_as_dict(),
+            distance_matrix=distance_matrix,
+            microhub=tManager.get_microhub(),
+            capacity_demands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume
         )
 
         # --------------------
         # POLICY NETWORK
-        policyManager = PolicyManager(environment.getStateHashes(),
+        policyManager = PolicyManager(environment.get_all_state_hashes(),
                                       learning_rate,
                                       discount_factor,
                                       exploration_factor,
@@ -213,12 +213,15 @@ def main(args):
 
         # --------------------
         # SAVING TRAINING RESULTS
-        # w = weight
-        # v = volume
-        # s = shipper
-        # c = carrier
-        # d = delivery date
-        # a = agent
+        """
+         Abbreviation explanation:
+         w = weight
+         v = volume
+         s = shipper
+         c = carrier
+         d = delivery date
+         a = agent
+        """
         policyManager.saveModel(model_name)
 
     if args['test']:
@@ -235,17 +238,17 @@ def main(args):
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
-            distanceMatrix=distance_matrix,
-            microHub=tManager.get_microhub(),
-            capacityDemands=tManager.get_capacity_demands_as_dict(),
+            distance_matrix=distance_matrix,
+            microhub=tManager.get_microhub(),
+            capacity_demands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume
         )
 
         # --------------------
         # POLICY NETWORK
-        policyManager = PolicyManager(environment.getStateHashes(),
+        policyManager = PolicyManager(environment.get_all_state_hashes(),
                                       learning_rate,
                                       discount_factor,
                                       exploration_factor,
