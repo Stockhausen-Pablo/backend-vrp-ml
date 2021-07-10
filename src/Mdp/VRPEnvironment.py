@@ -155,7 +155,7 @@ class VRPEnvironment:
         reward = self.distance_matrix.at[current_stop.hash_id, next_stop.hash_id]
         return reward
 
-    def reward_func_hash(self, current_stop: object, next_stop: object) -> object:
+    def reward_func_hash(self, current_stop: float, next_stop: float) -> object:
         """
         :param current_stop: current state hash in the environment
         :param next_stop: next possible stop hash
@@ -163,7 +163,7 @@ class VRPEnvironment:
         """
         return self.distance_matrix.at[current_stop, next_stop]
 
-    def get_capacity_demand_of_stop(self, stop_hash: object) -> object:
+    def get_capacity_demand_of_stop(self, stop_hash: float) -> object:
         """
         :param stop_hash: hash_id of given stop
         :return: capacity demand of specified stop
@@ -182,7 +182,7 @@ class VRPEnvironment:
         """
         return self.microhub.hash_id
 
-    def get_state_by_hash(self, hashIdentifier: object) -> object:
+    def get_state_by_hash(self, hashIdentifier: float) -> object:
         """
         :param hashIdentifier: hash_id of given stop
         :return: stop by hash_id

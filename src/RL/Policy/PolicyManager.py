@@ -31,6 +31,7 @@ class PolicyManager:
                  capacity_utilization_threshold,
                  local_search_threshold,
                  policy_reset_threshold):
+
         # --------------------
         # STATES / ACTIONS
         self.state_hashes = state_hashes
@@ -68,7 +69,18 @@ class PolicyManager:
         # PARAMETERIZED POLICY
         self.policy_action_space = pd.DataFrame()
 
-    def policy_update_by_learning(self, env, episode, episode_reward, gamma, max_steps, num_episodes, epoch):
+    def policy_update_by_learning(self, env: object, episode: object, episode_reward: int, gamma: float, max_steps: int, num_episodes: int, epoch: int) -> object:
+        """
+        Takes the episodes "on-policy" experience and updates the policy.
+        :param env: environment instance
+        :param episode: List of every taken step in the episode
+        :param episode_reward: Cumulative reward of the episode
+        :param gamma: gamma factor
+        :param max_steps: max steps amount that the policy manager is allowed to use
+        :param num_episodes: the overall amount of defined episodes
+        :param epoch: current epoch
+        :return: Cumulative discount reward, average reward, lose history, epsilon, current policy reward
+        """
         # --------------------
         # COPY OLD POLICY
         policy_action_space_copy = self.policy_action_space.copy()
@@ -126,7 +138,6 @@ class PolicyManager:
             # earned_reward = episode[idx].reward
             softmax_weights = action_by_softmax_as_dict(self.policy_action_space.loc[state_hash, :])
             baseline_estimate = self.calculate_value_func(env,
-                                                          episode[idx],
                                                           softmax_weights,
                                                           gamma,
                                                           episode[idx].microhub_counter)
@@ -144,10 +155,9 @@ class PolicyManager:
             # --------------------
             # CALCULATE LOSE/COST
             # lose = self.custom_loss(current_weight, g, advantage_estimate)
-            # lose = self.cost(current_weight, g, advantage_estimate)
-            # loseHistory.append(lose)
-            # print("Current_lose: ", lose)
-            # gradients = self.grad(current_weight, g, advantage_estimate)
+            lose = self.calculate_cost(current_weight, g, advantage_estimate)
+            loseHistory.append(lose)
+            print("Current_lose: ", lose)
 
             # --------------------
             # SETUP LEARNING RATE AND GAMMA_T
@@ -198,6 +208,7 @@ class PolicyManager:
                 to_update_states.remove(next_state_hash)
                 self.policy_action_space.loc[state_hash, to_update_states] **= (
                         self.decreasing_factor_good_episode + (reward_difference_reduced if reward_difference_reduced > 0 else 0))
+
             # --------------------
             # BACKPROPAGATION
             # Backpropagation mit Trägheitsterm fehlt
@@ -256,33 +267,47 @@ class PolicyManager:
         # RETURN
         return G_t, J_avR, loseHistory, eps, policy_relevant_reward
 
-    def construct_policy(self, policy, env, max_steps):
+    def construct_policy(self, policy: object, env: object, max_steps: int) -> object:
+        """
+        Construct current policy by optimal path.
+        :param policy: current policy
+        :param env: environment instance
+        :param max_steps: max steps amount that the policy manager is allowed to use
+        :return: policy reward, all constructed tours
+        """
         policy_reward = 0.0
-        allTours = []
+        all_tours = []
         tour = []
         state = env.reset()
         tour.append(state)
+
         for step_t in range(max_steps):
             print("constructing policy: get legal next states")
             legal_next_action, legal_next_states, legal_next_states_hubs_ignored, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, microhub_counter = env.get_next_legal_action()
             print("constructing policy: getting action space")
             action_space = self.get_action_space_by_policy(state, legal_next_states, policy, microhub_counter)
             print("constructing policy: doing step")
-            next_state, reward, done, currentTour, currentTours = env.step(legal_next_action, action_space)
+            next_state, reward, done, current_tour, current_tours = env.step(legal_next_action, action_space)
             policy_reward += reward
 
             state = next_state
             tour.append(state)
             if legal_next_action == 0 or legal_next_action == 2:
-                allTours.append(tour)
-                tour = []
-                tour.append(state)
+                all_tours.append(tour)
+                tour = [state]
             if done:
                 break
 
-        return policy_reward, allTours
+        return policy_reward, all_tours
 
-    def handle_multiple_tours(self, state, next_state, microhub_counter):
+    def handle_multiple_tours(self, state: object, next_state: object, microhub_counter: int) -> object:
+        """
+        Defines handle logic for multiple hub entries in policy.
+        :param state: current state
+        :param next_state: next state
+        :param microhub_counter: counter number specifying how often the tour constructor returned to the hub
+        :return: state hash_id, next state hash_id
+        """
         if state.hash_id == self.microhub_hash:
             state_hash = '{}/{}'.format(state.hash_id, microhub_counter)
         else:
@@ -294,7 +319,16 @@ class PolicyManager:
 
         return state_hash, next_state_hash
 
-    def calculate_value_func(self, env, episode, weights_dict, gamma, microhub_counter, theta=0.0001):
+    def calculate_value_func(self, env: object, weights_dict: dict, gamma: float, microhub_counter: int, theta: float = 0.0001) -> object:
+        """
+        Calculates state-value function.
+        :param env: environment instance
+        :param weights_dict: dictionary of states with associated softmax weights
+        :param gamma: gamma factor
+        :param microhub_counter: counter number specifying how often the tour constructor returned to the hub
+        :param theta: threshold indicator for termination
+        :return: baseline estimate
+        """
         while True:
             delta = 0.0
             old_values = np.copy(self.baseline_estimate)
@@ -307,7 +341,7 @@ class PolicyManager:
                     p = weights_dict.get(s_n if s_n != self.microhub_hash else '{}/{}'.format(s_n, microhub_counter))
                     r = env.reward_func_hash(s_a_stop.hash_id, s_n)
                     # v[s_next.stopid] = r + gamma * (p * self.baseline_estimate[s_next.stopid])
-                    v[s_next.stop_id] = p * (r + gamma * self.baseline_estimate[s_next.stop_id])
+                    v[s_next.stop_id] = pi_s_a * p * (r + gamma * self.baseline_estimate[s_next.stop_id])
                     # if (s_next.hashIdentifier == self.microhub_hash):
                     #    v[s_next.stopid] *= self.microhub_counter
                 self.baseline_estimate[s_a_stop.stop_id] = np.sum(v)
@@ -317,7 +351,11 @@ class PolicyManager:
                 break
         return self.baseline_estimate
 
-    def resolve_weight(self, grad_weight, current_weight, possible_rewards):
+    def resolve_weight(self, grad_weight: object, current_weight: float, possible_rewards: object) -> object:
+        """
+        Clipping
+        :return: clipped weight
+        """
         weight_new = current_weight
         if grad_weight == 0 and len(possible_rewards) > 1:
             weight_new = current_weight ** self.increasing_factor  # try to increase probability by 5%
@@ -327,27 +365,38 @@ class PolicyManager:
             weight_new = current_weight ** self.decreasing_factor  # try to decrease probability by 5%
         return weight_new
 
-    def sigmoidActivation(self, z):
+    @staticmethod
+    def sigmoid_activation(z):
         return 1 / (1 + np.exp(-z))
 
-    def dotProduct(self, W, X):
-        return self.sigmoidActivation(np.dot(X, W))
+    def calculate_dot_product(self, W, X):
+        return self.sigmoid_activation(np.dot(X, W))
 
-    def calculateCost(self, W, X, Y):
-        y_pred = self.dotProduct(W, X)
+    def calculate_cost(self, W, X, Y):
+        y_pred = self.calculate_dot_product(W, X)
         return -1 * (Y * np.log(y_pred) + (1 - Y) * np.log(1 - y_pred))
 
-    def calculateGradient(self, W, X, Y):
-        y_pred = self.dotProduct(W, X)
+    def calculate_gradient(self, W, X, Y):
+        y_pred = self.calculate_dot_product(W, X)
         A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
         g = -1 * np.dot(A.T, X)
         return g
 
-    def custom_loss(self, y_true, y_pred, advantages):  # objective function
+    @staticmethod
+    def custom_lose(y_true: object, y_pred: object, advantages: object) -> object:  # objective function
         log_lik = y_true * K.log(y_pred)
-        return K.mean(-log_lik * advantages)
+        value = K.mean(-log_lik * advantages)
+        return K.get_value(value)
 
-    def get_action_space_by_policy(self, state, legal_next_states, policy, microhub_counter):
+    def get_action_space_by_policy(self, state: object, legal_next_states: object, policy: object, microhub_counter: int) -> object:
+        """
+        Gets the action space following a specific given policy.
+        :param state: current state
+        :param legal_next_states: possible next states
+        :param policy: current policy
+        :param microhub_counter: counter number specifying how often the tour constructor returned to the hub
+        :return:
+        """
         if state.hash_id == self.microhub_hash:
             self.policy_action_space.fillna(value=0.05, inplace=True)
             if '{}/{}'.format(self.microhub_hash, microhub_counter) not in self.policy_action_space.index.values:
@@ -370,8 +419,19 @@ class PolicyManager:
         highest_prob_action_space = legal_next_states[index]
         return highest_prob_action_space
 
-    def get_action_space(self, eps, state, legal_next_states, legal_next_states_local_search_distance, legal_next_states_bin_packing_capacities, microhub_counter_env):
-        # Check MicroHub counter
+    def get_action_space(self, eps: object, state: object, legal_next_states: object, legal_next_states_local_search_distance: object,
+                         legal_next_states_bin_packing_capacities: object,
+                         microhub_counter_env: object) -> object:
+        """
+        Gets the action space following the current policy.
+        :param eps: exploration threshold
+        :param state: current state
+        :param legal_next_states: next possible states
+        :param legal_next_states_local_search_distance: next possible states under perspective of the distance
+        :param legal_next_states_bin_packing_capacities: next possible states under perspective of the capacities
+        :param microhub_counter_env: Given microhunter by the environment.
+        :return: next action, next action probability
+        """
         if self.microhub_counter != microhub_counter_env:
             self.microhub_counter = microhub_counter_env
             if ('{}/{}'.format(self.microhub_hash, self.microhub_counter) not in self.policy_action_space.index.values):
@@ -443,26 +503,34 @@ class PolicyManager:
             else:
                 return highest_prob_action_space, highest_prob
 
-    def get_action(self, state):
+    def get_action(self, state: object) -> object:
+        """
+        :param state: given state
+        :return: most likely next state, highest probability
+        """
         action_prob = self.policy_action.loc[state.hash_id].to_numpy()
         highest_prob_action = np.random.choice(np.arange(len(action_prob)), p=action_prob)
         return highest_prob_action, action_prob[highest_prob_action]
 
-    def get_current_policy(self):
+    def get_current_policy(self) -> object:
+        """
+        :return: current policy
+        """
         return self.policy_action_space
 
-    def get_current_baseline_as_dict(self):
+    def get_current_baseline_as_dict(self) -> object:
+        """
+        :return: baseline estimate as dict
+        """
         baseline_dict = dict()
         for state_hash, baseline_value in zip(self.state_hashes, self.baseline_estimate):
             baseline_dict[state_hash] = baseline_value
         return baseline_dict
 
-    def compute_G_t(self, reward_memory):
+    def compute_G_t(self, reward_memory: object) -> object:
         """
-        args
-          a list of rewards
-        returns
-          a list of cummulated rewards G_t = R_{t+1} + gamma*R_{t+2} + gamma^2*R_{t+3} + .. + gamma^{T-t-1}*R_{T}
+        :param reward_memory: list of rewards
+        :returns: a list of cummulated rewards G_t = R_{t+1} + gamma*R_{t+2} + gamma^2*R_{t+3} + .. + gamma^{T-t-1}*R_{T}
         """
         G_t = np.zeros_like(reward_memory)
         for t in range(len(reward_memory)):
@@ -473,15 +541,22 @@ class PolicyManager:
             G_t[t] = G_sum
         return G_t
 
-    def compute_J_avR(self, G_t):
+    @staticmethod
+    def compute_J_avR(G_t: object) -> object:
         """
         calculate the objective function
-        average reward per time-step
         purpose to measure the quality of a policy pi
+        :returns: average reward per time-step
         """
         return np.mean(G_t)
 
-    def apply_aco_on_policy(self, increasing_factor, aco_probability_matrix):
+    def apply_aco_on_policy(self, increasing_factor: float, aco_probability_matrix: object) -> object:
+        """
+        Applies the aco result on current policy.
+        :param increasing_factor: increasing factor of aco
+        :param aco_probability_matrix: aco result
+        :return: None
+        """
         for index, row in aco_probability_matrix.iterrows():
             for state, aco_probability in row.items():
                 if state not in self.policy_action_space.index.values:
@@ -493,10 +568,18 @@ class PolicyManager:
                     self.policy_action_space.at[index, state] = self.policy_action_space.at[
                                                                     index, state] ** increasing_factor
 
-    def saveModel(self, model_name):
+    def saveModel(self, model_name: str) -> object:
+        """
+        :param model_name: ML-Model name that will be saved
+        :return: None
+        """
         save_memory_df_to_local('./model/' + model_name + '.pkl', self.policy_action_space)
 
-    def loadModel(self, model_name):
+    def loadModel(self, model_name: str) -> object:
+        """
+        :param model_name: ML-Model name that will be loaded
+        :return: None
+        """
         loaded_model = load_memory_df_from_local('./model/' + model_name + '.pkl', self.state_hashes,
                                                  self.microhub_hash)
         self.policy_action_space = loaded_model
