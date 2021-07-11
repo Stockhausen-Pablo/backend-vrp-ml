@@ -23,10 +23,10 @@ def load_stop_data(data_input):
         csv_reader = csv.reader(file)
         next(csv_reader, None)
         for row in csv_reader:
-            tManager.addStop(
+            tManager.add_stop(
                 Stop(str(row[0]), int(row[1]), float(row[2]), float(row[3]), float(row[4]), float(row[5]), int(row[6]), int(row[7])))
-    tManager.calculateDistanceMatrix()
-    tManager.initCapacityDemands()
+    tManager.calculate_distance_matrix()
+    tManager.init_capacity_demands()
 
 
 def main(args):
@@ -69,18 +69,18 @@ def main(args):
     # define meta data
     print("---------System menu---------")
     print("Below please specify the configuration options of the program")
-    data_input = input("Please specify the data source of the stops to be processed:") or 'train_data'
+    data_input = input("Please specify the data source of the stops to be processed:") or 'short_train_data'
     print('-Regarding the Microhub name, this should be unique and used only for this Microhub.-')
     print('-The model of the agent is saved but also loaded based on the microhub names.-')
     microhub_name = input("Please specify the microhub name:") or "TestHub"
     shipper_name = input("Please specify the shipper name:") or "TestVersender"
     carrier_name = input("Please specify the carrier name:") or "TestCarrier"
     print('-Enter the delivery date. Possible Answers [Mon, Tue, Wed, Thurs, Fri, Sat]')
-    delivery_date = input("Please specify the delivery date:") or "Tue"
+    delivery_date = input("Please specify the delivery date:") or "Test"
     amount_vehicles = int(input("How many vehicles will be used:") or 2)
     vehicle_speed = int(input("How fast is the vehicle [km/h]: ") or 30)
-    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 250)
-    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 700)
+    capacity_weight = float(input("What is the maximum weight that the vehicle can carry:") or 180)
+    capacity_volume = float(input("What is the maximum volume that the vehicle can hold:") or 500)
 
     # --------------------
     # SETTING UP TOUR MANAGER
@@ -89,7 +89,7 @@ def main(args):
     load_stop_data(data_input)
 
     # Setup Distance Matrix for later use
-    distance_matrix = tManager.getDistances()
+    distance_matrix = tManager.get_distances()
 
     # --------------------
     # PLOT COORDINATES
@@ -106,13 +106,13 @@ def main(args):
         # setting up and running ACO
         print("-Starting up Ant Colony Optimization to get Probability Matrix-")
         antManager = AntManager(
-            stops=tManager.getListOfStops(),
-            start_stop=tManager.getStop(0),
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume,
+            stops=tManager.get_list_of_stops(),
+            start_stop=tManager.get_stop(0),
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume,
             vehicleCount=amount_vehicles,
-            discountAlpha=aco_alpha_factor,
-            discountBeta=aco_beta_factor,
+            discount_alpha=aco_alpha_factor,
+            discount_beta=aco_beta_factor,
             pheromone_evaporation_coefficient=pheromone_evaporation_coefficient,
             pheromone_constant=pheromone_constant,
             iterations=aco_iterations
@@ -122,7 +122,7 @@ def main(args):
         # RUN ACO
         # retrieving solution from ACO and preparing further transformation
         aco_start = timer()
-        resultACO = antManager.runACO()
+        resultACO = antManager.run_aco()
         aco_end = timer()
 
         # --------------------
@@ -136,23 +136,23 @@ def main(args):
         # setting up MDP-Environment
         print('SETTING UP ENVIRONMENT')
         environment = VRPEnvironment(
-            states=tManager.getListOfStops(),
+            states=tManager.get_list_of_stops(),
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
-            distanceMatrix=distance_matrix,
-            microHub=tManager.getMicrohub(),
-            capacityDemands=tManager.getCapacityDemands(),
+            distance_matrix=distance_matrix,
+            microhub=tManager.get_microhub(),
+            capacity_demands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume
         )
 
         # --------------------
         # POLICY NETWORK
-        policyManager = PolicyManager(environment.getStateHashes(),
+        policyManager = PolicyManager(environment.get_all_state_hashes(),
                                       learning_rate,
                                       discount_factor,
                                       exploration_factor,
@@ -183,7 +183,7 @@ def main(args):
         # AGENT
         print('SETTING UP AGENT')
         agent = VRPAgent(env=environment,
-                         policyManager=policyManager,
+                         policy_manager=policyManager,
                          num_episodes=num_episodes,
                          max_steps=max_steps,
                          discount_factor=discount_factor
@@ -213,12 +213,15 @@ def main(args):
 
         # --------------------
         # SAVING TRAINING RESULTS
-        # w = weight
-        # v = volume
-        # s = shipper
-        # c = carrier
-        # d = delivery date
-        # a = agent
+        """
+         Abbreviation explanation:
+         w = weight
+         v = volume
+         s = shipper
+         c = carrier
+         d = delivery date
+         a = agent
+        """
         policyManager.saveModel(model_name)
 
     if args['test']:
@@ -229,23 +232,23 @@ def main(args):
         # ENVIRONMENT
         # setting up MDP-Environment
         environment = VRPEnvironment(
-            states=tManager.getListOfStops(),
+            states=tManager.get_list_of_stops(),
             # actions:
             # 0 = select microhub if tour full and possible Stops != null
             # 1 = select unvisited Node from possible Stops
             # 2 = select microhub if tour full and possible Stops = null
             actions=[0, 1, 2],
-            distanceMatrix=distance_matrix,
-            microHub=tManager.getMicrohub(),
-            capacityDemands=tManager.getCapacityDemands(),
+            distance_matrix=distance_matrix,
+            microhub=tManager.get_microhub(),
+            capacity_demands=tManager.get_capacity_demands_as_dict(),
             vehicles=amount_vehicles,
-            vehicleWeight=capacity_weight,
-            vehicleVolume=capacity_volume
+            vehicle_weight=capacity_weight,
+            vehicle_volume=capacity_volume
         )
 
         # --------------------
         # POLICY NETWORK
-        policyManager = PolicyManager(environment.getStateHashes(),
+        policyManager = PolicyManager(environment.get_all_state_hashes(),
                                       learning_rate,
                                       discount_factor,
                                       exploration_factor,
@@ -284,9 +287,9 @@ def main(args):
 
         for tour in final_tours:
             for stop in tour:
-                total_box_amount += stop.boxAmount
-                total_weight += stop.demandWeight
-                total_volume += stop.demandVolume
+                total_box_amount += stop.box_amount
+                total_weight += stop.demand_weight
+                total_volume += stop.demand_volume
 
         mean_box_amount = total_box_amount/len(final_tours)
         mean_volume = total_volume / len(final_tours)
@@ -296,7 +299,7 @@ def main(args):
         total_time, total_distance, average_time_per_tour, average_distance_per_tour = calculate_tour_meta(
             vehicle_speed, stay_duration, final_tours)
 
-        print("Stop Amount: ", len(tManager.getListOfStops()))
+        print("Stop Amount: ", len(tManager.get_list_of_stops()))
         print("TESTING RUN TIME in s: ", (testing_end - testing_start))
         print("Amount of constructed Tours: ", len(final_tours))
         print("Mean Box Amount per Tour: ", mean_box_amount)

@@ -21,7 +21,10 @@ def load_memory_df_from_local(pickle_name, state_hashes, microhub_hash):
                     state = '{}/{}'.format(microhub_hash, 0)
                 if state not in df_pickle.index:
                     print("Filling up the pickle with missing hashIdentifiers")
-                    df_pickle[state] = df_pickle.index
+                    new_row = pd.Series(name=state)
+                    df_pickle = df_pickle.append(new_row, ignore_index=False)
+                    df_pickle.fillna(value=1 / len(state_hashes), inplace=True)
+                    df_pickle[state] = 1 / len(state_hashes)
             df_pickle.fillna(value=float(0.0), inplace=True)
             return df_pickle
     except Exception as ex:

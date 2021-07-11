@@ -61,9 +61,9 @@ def plot_tour_with_stopnr_as_label(tours):
     """
     Plots constructed tour with stop number as the scatter-point labels.
     """
-    def connectPoints(x, y, p1, p2, col):
-        x1, x2 = x[p1], x[p2]
-        y1, y2 = y[p1], y[p2]
+    def connect_points(X, Y, p1, p2, col):
+        x1, x2 = X[p1], X[p2]
+        y1, y2 = Y[p1], Y[p2]
         line, = plt.plot([x1, x2], [y1, y2], 'k-', linewidth=2)
         line.set_color(col)
 
@@ -81,7 +81,7 @@ def plot_tour_with_stopnr_as_label(tours):
         colors_for_plt_legend.append(color)
         for idy, stop in enumerate(tour):
             next_stop = tour[(idy + 1) % len(tour)]
-            connectPoints(x, y, stop.stopid, next_stop.stopid, color)
+            connect_points(x, y, stop.stop_id, next_stop.stop_id, color)
         tour_id += 1
 
     rows = [mpatches.Patch(color=tourColor) for tourColor in colors_for_plt_legend]
