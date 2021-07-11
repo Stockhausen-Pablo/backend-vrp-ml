@@ -15,7 +15,8 @@ from src.Utils.plotter import plot_episode_stats,\
     plot_baseline_estimate,\
     plot_coordinates_with_coordinates_as_label, \
     plot_coordinates_with_stopnr__as_label,\
-    plot_tour_with_stopnr_as_label
+    plot_tour_with_stopnr_as_label,\
+    plot_tours_individual
 
 
 def load_stop_data(data_input):
@@ -315,6 +316,7 @@ def main(args):
         # --------------------
         # PLOTTING TOUR (UNNECESSARY IN PRODUCTION)
         plot_tour_with_stopnr_as_label(final_tours)
+        plot_tours_individual(final_tours, model_name)
 
 
 if __name__ == "__main__":

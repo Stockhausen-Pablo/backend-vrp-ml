@@ -104,6 +104,54 @@ def plot_tour_with_stopnr_as_label(tours):
     plt.show()
 
 
+def plot_tours_individual(tours, model_name):
+    """
+    Plots constructed tour with stop number as the scatter-point labels.
+    """
+    def connect_points(X, Y, p1, p2, col):
+        x1, x2 = X[p1], X[p2]
+        y1, y2 = Y[p1], Y[p2]
+        line, = plt.plot([x1, x2], [y1, y2], 'k-', linewidth=2)
+        line.set_color(col)
+
+    _, stop_id, x, y, _, _, _, _ = zip(*[stop.getStop() for stop in tManager.stops])
+
+    cols = plt_color(stop_id)
+
+    plt.scatter(x, y, s=250, c=cols)
+
+    colors = cm.rainbow(np.linspace(0, 1, len(tours)))
+    colors_for_plt_legend = []
+
+    tour_id = 0
+    for tour, color in zip(tours, colors):
+        colors_for_plt_legend.append(color)
+        for idy, stop in enumerate(tour):
+            next_stop = tour[(idy + 1) % len(tour)]
+            connect_points(x, y, stop.stop_id, next_stop.stop_id, color)
+        tour_id += 1
+
+    rows = [mpatches.Patch(color=tourColor) for tourColor in colors_for_plt_legend]
+    text_label = ['tour {}'.format(i + 1) for i in range(len(tours))]
+
+    plt.legend(rows,
+               text_label,
+               fontsize=11)
+
+    for tour in tours:
+        tour_stop_nr = 0
+        for stop in tour:
+            plt.text(stop.longitude,
+                     stop.latitude,
+                     tour_stop_nr,
+                     horizontalalignment='left',
+                     verticalalignment='bottom',
+                     fontsize=18)
+            tour_stop_nr += 1
+    plt.savefig('./results/' + model_name + '.png')
+    plt.show()
+
+
 def plot_baseline_estimate(V, title="Baseline Estimate"):
     """
     Plots the baseline estimate as a surface plot.
