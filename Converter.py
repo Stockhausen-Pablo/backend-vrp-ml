@@ -3,13 +3,13 @@ import pandas as pd
 
 print("---------Conversion mode menu---------")
 print("-Specification of the file name-")
-print("-The relevant data are located in the folder data/toConvert-")
+print("-The relevant data are located in the folder data/to_convert-")
 input_data = input("Please enter the name of the file:")
 
 df_converted_stops = pd.DataFrame(columns=["stopIdentifier", "stopNr", "Longitude", "Latitude", "DemandWeight", "DemandVolume", "BoxAmount", "TourStopId"])
 
 print("Trying to open the file...")
-with open('data/toConvert/' + input_data + '.csv', 'r') as file:
+with open('data/to_convert/' + input_data + '.csv', 'r') as file:
     print("Successfully opened the file...")
     csv_reader = csv.reader(file)
     next(csv_reader, None)
