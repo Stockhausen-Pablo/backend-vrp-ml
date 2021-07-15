@@ -1,0 +1,6 @@
+#!/bin/bash 
+# create .keep files for empty directories currently ignored by git
+# run git clean -nd to see which directories are empty and therefore ignored by git currently 
+# run git keep to add these directories by adding a .keep file
+# see this discussion http://stackoverflow.com/questions/115983/how-do-i-add-an-empty-directory-to-a-git-repository/21422128#21422128
+git clean -nd | awk '{ print $3 }' | xargs -L1 -I{} touch {}.keep

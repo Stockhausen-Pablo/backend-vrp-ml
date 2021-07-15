@@ -28,7 +28,7 @@ stay_duration = int(input("How long is the stay duration per Stop: ") or 5)
 # --------------------
 # SET MICROHUB AS FIRST STOP
 # Defined longitude/latitude manually
-microhub = make_simple_stop(13.43599, 52.53973000000001, 0)
+microhub = make_simple_stop(13.3069357, 52.5013048, 0)
 
 print("Trying to open the file...")
 with open('data/constructed_tours_by_za/' + data_set + '.json', 'r') as file:

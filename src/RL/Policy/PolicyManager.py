@@ -5,7 +5,6 @@ import pandas as pd
 
 from src.Utils.helper import normalize_list, action_by_softmax_as_dict
 from src.Utils.memoryLoader import load_memory_df_from_local, save_memory_df_to_local
-import keras.backend as K  # dont remove
 
 
 def clip_weight(current_weight, clipValue):
@@ -135,7 +134,6 @@ class PolicyManager:
             # --------------------
             # VALUE FUNCTION (Policy Evaluation)
             # Get possible lowest reward | goal to minimize reward (as lowest distance)
-            # earned_reward = episode[idx].reward
             softmax_weights = action_by_softmax_as_dict(self.policy_action_space.loc[state_hash, :])
             baseline_estimate = self.calculate_value_func(env,
                                                           softmax_weights,
@@ -154,7 +152,6 @@ class PolicyManager:
 
             # --------------------
             # CALCULATE LOSE/COST
-            # lose = self.custom_loss(current_weight, g, advantage_estimate)
             lose = self.calculate_cost(current_weight, g, advantage_estimate)
             loseHistory.append(lose)
             print("Current_lose: ", lose)
@@ -208,12 +205,6 @@ class PolicyManager:
                 to_update_states.remove(next_state_hash)
                 self.policy_action_space.loc[state_hash, to_update_states] **= (
                         self.decreasing_factor_good_episode + (reward_difference_reduced if reward_difference_reduced > 0 else 0))
-
-            # --------------------
-            # BACKPROPAGATION
-            # Backpropagation mit Trägheitsterm fehlt
-            # grad_weight = -self.learning_rate * (lose / current_weight)
-            # weight_new = self.resolve_weight(grad_weight, current_weight, episode[idx].possible_rewards)
 
             # --------------------
             # SET UPDATED NEW WEIGHT
@@ -366,27 +357,22 @@ class PolicyManager:
         return weight_new
 
     @staticmethod
-    def sigmoid_activation(z):
+    def sigmoid_activation(z: object) -> object:
         return 1 / (1 + np.exp(-z))
 
-    def calculate_dot_product(self, W, X):
+    def calculate_dot_product(self, W: object, X: object) -> object:
         return self.sigmoid_activation(np.dot(X, W))
 
-    def calculate_cost(self, W, X, Y):
+    def calculate_cost(self, W: object, X: object, Y: object) -> object:
+        """
+        Calculate the cost for choosing an specific action.
+        :param W: the current weight of the choosen action.
+        :param X: Discounted reward for current timestep.
+        :param Y: Advantage estimate
+        :return: cost
+        """
         y_pred = self.calculate_dot_product(W, X)
         return -1 * (Y * np.log(y_pred) + (1 - Y) * np.log(1 - y_pred))
-
-    def calculate_gradient(self, W, X, Y):
-        y_pred = self.calculate_dot_product(W, X)
-        A = (Y * (1 - y_pred) - (1 - Y) * y_pred)
-        g = -1 * np.dot(A.T, X)
-        return g
-
-    @staticmethod
-    def custom_lose(y_true: object, y_pred: object, advantages: object) -> object:  # objective function
-        log_lik = y_true * K.log(y_pred)
-        value = K.mean(-log_lik * advantages)
-        return K.get_value(value)
 
     def get_action_space_by_policy(self, state: object, legal_next_states: object, policy: object, microhub_counter: int) -> object:
         """
