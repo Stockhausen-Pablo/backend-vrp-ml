@@ -1,0 +1,20 @@
+<html lang="de">
+    <head>
+        <title>Test SSE</title>
+        <script>
+            const evtSource = new EventSource("http://127.0.0.1:5000/ml-service/training/stream");
+            evtSource.onmessage = function(event) {
+                console.log(event);
+                const newElement = document.createElement("li");
+                const eventList = document.getElementById("results");
+                newElement.textContent = "message: " + event.data;
+                eventList.appendChild(newElement);
+            }
+        </script>
+    </head>
+    <body>
+        <ul id="results">
+
+        </ul>
+    </body>
+</html>

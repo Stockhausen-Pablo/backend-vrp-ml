@@ -1,6 +1,7 @@
 import collections
 from collections import namedtuple
 
+import requests
 import numpy as np
 
 
@@ -53,12 +54,24 @@ class VRPAgent:
                                                  )
         self.episode_statistics = VRPAgent.EpisodeStats(
             episode_lengths=np.zeros(num_episodes),
-            episode_rewards=np.zeros(num_episodes),
+            episode_rewards=np.empty(num_episodes) * np.nan,
             episode_tours=[[] for i in range(num_episodes)],
             episode_G_t=np.zeros(num_episodes),
             episode_J_avR=np.zeros(num_episodes),
-            episode_policy_reward=np.zeros(num_episodes)
+            episode_policy_reward=np.empty(num_episodes) * np.nan
         )
+
+    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward):
+        pload = {
+            'epoch': epoch,
+            'policy_reward': policy_reward,
+            'sum_G_t': sum_G_t,
+            'best_policy_reward': best_policy_reward,
+            'worst_policy_reward': worst_policy_reward
+        }
+        headers = {'Content-type': 'form-data'}
+        r = requests.post('http://127.0.0.1:5000/ml-service/training/update', data=pload)
+        print(r.text)
 
     def train_model(self) -> object:
         """
@@ -70,7 +83,7 @@ class VRPAgent:
             G_t, J_avR, loseHistory, eps, policy_reward = self.policy_manager.policy_update_by_learning(self.env,
                                                                                                         self.episode,
                                                                                                         self.episode_statistics.episode_rewards[
-                                                                                                           epoch],
+                                                                                                            epoch],
                                                                                                         self.gamma,
                                                                                                         self.max_steps,
                                                                                                         self.num_episodes,
@@ -82,6 +95,13 @@ class VRPAgent:
             self.episode_statistics.episode_policy_reward[epoch] = policy_reward
 
             self.eps = eps
+            self.update_training_stream(
+                epoch,
+                policy_reward,
+                sum(G_t),
+                min(self.episode_statistics.episode_policy_reward),
+                max(self.episode_statistics.episode_policy_reward)
+            )
             self.env.reset()
 
         best_policy_reward = min(self.episode_statistics.episode_policy_reward)
@@ -95,7 +115,8 @@ class VRPAgent:
                worst_policy_reward, \
                last_policy_reward
 
-    def update(self, state: object, action: object, action_space_prob: object, reward: float, next_state: object, done: bool, possible_next_states: object,
+    def update(self, state: object, action: object, action_space_prob: object, reward: float, next_state: object,
+               done: bool, possible_next_states: object,
                possible_next_states_hub_ignored: object,
                possible_rewards: object, microhub_counter: int) -> object:
         """
@@ -181,7 +202,7 @@ class VRPAgent:
             # DO STEP IN ENVIRONMENT
             # follow policy
             next_state, reward, done, current_tour, current_tours = self.observe_transition(legal_next_action,
-                                                                                          action_space)
+                                                                                            action_space)
 
             # --------------------
             # SAVE TRANSITION

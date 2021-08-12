@@ -79,7 +79,7 @@ def getParams():
                             help="Define pheromone evaporation coefficient for aco")
     argsParser.add_argument('--pheromone_constant', default=1.0, type=float,
                             help="Define the pheromone constant for aco")
-    argsParser.add_argument('--aco_iterations', default=300, type=int,
+    argsParser.add_argument('--aco_iterations', default=10, type=int,
                             help="Define the number of iterations for aco")
     argsParser.add_argument('--aco_increasing_factor', default=0.9, type=float,
                             help="Define the increasing factor for aco. This will be applied in the process of the "
