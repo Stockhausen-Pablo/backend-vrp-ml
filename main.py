@@ -3,6 +3,9 @@ import csv
 import json
 from datetime import datetime
 from io import BytesIO
+
+from flask_restful.utils.cors import crossdomain
+
 import src.Tour.TourManager as tManager
 import redis
 import flask
@@ -10,7 +13,7 @@ import flask
 from timeit import default_timer as timer
 from flask import Flask, send_file, make_response, render_template, jsonify, request
 from flask_restful import Resource, Api, reqparse
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 from argsConfig import getParams
 from src.Aco.AntManager import AntManager
@@ -136,133 +139,6 @@ def main(args):
     plot_coordinates_with_coordinates_as_label()
     plot_coordinates_with_stopnr__as_label()
 
-    if args['train']:
-        # --------------------TRAINING MODE--------------------
-        print("-Entered Training Mode-")
-
-        # --------------------
-        # ANT COLONY OPTIMIZATION
-        # setting up and running ACO
-        print("-Starting up Ant Colony Optimization to get Probability Matrix-")
-        antManager = AntManager(
-            stops=tManager.get_list_of_stops(),
-            start_stop=tManager.get_stop(0),
-            vehicle_weight=capacity_weight,
-            vehicle_volume=capacity_volume,
-            vehicleCount=amount_vehicles,
-            discount_alpha=aco_alpha_factor,
-            discount_beta=aco_beta_factor,
-            pheromone_evaporation_coefficient=pheromone_evaporation_coefficient,
-            pheromone_constant=pheromone_constant,
-            iterations=aco_iterations
-        )
-
-        # --------------------
-        # RUN ACO
-        # retrieving solution from ACO and preparing further transformation
-        aco_start = timer()
-        resultACO = antManager.run_aco()
-        aco_end = timer()
-
-        # --------------------
-        # ACO RESULTS
-        ant_shortest_distance = resultACO[0]
-        ant_shortest_path = resultACO[1]
-        aco_probability_Matrix = resultACO[2]
-
-        # --------------------
-        # ENVIRONMENT
-        # setting up MDP-Environment
-        print('SETTING UP ENVIRONMENT')
-        environment = VRPEnvironment(
-            states=tManager.get_list_of_stops(),
-            # actions:
-            # 0 = select microhub if tour full and possible Stops != null
-            # 1 = select unvisited Node from possible Stops
-            # 2 = select microhub if tour full and possible Stops = null
-            actions=[0, 1, 2],
-            distance_matrix=distance_matrix,
-            microhub=tManager.get_microhub(),
-            capacity_demands=tManager.get_capacity_demands_as_dict(),
-            vehicles=amount_vehicles,
-            vehicle_weight=capacity_weight,
-            vehicle_volume=capacity_volume
-        )
-
-        # --------------------
-        # POLICY NETWORK
-        policyManager = PolicyManager(environment.get_all_state_hashes(),
-                                      learning_rate,
-                                      discount_factor,
-                                      exploration_factor,
-                                      increasing_factor,
-                                      increasing_factor_good_episode,
-                                      decreasing_factor,
-                                      decreasing_factor_good_episode,
-                                      baseline_theta,
-                                      distance_utilization_threshold,
-                                      capacity_utilization_threshold,
-                                      local_search_threshold,
-                                      policy_reset_threshold
-                                      )
-
-        # --------------------
-        # LOAD PREVIOUS ML-MODEL
-        print('LOADING MODEL')
-        model_name = create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name,
-                                       delivery_date, ml_agent)
-        policyManager.loadModel(model_name)
-
-        # --------------------
-        # APPLY ACO TO ML-MODEL
-        print('APPLYING ACO ON MODEL')
-        policyManager.apply_aco_on_policy(aco_increasing_factor, aco_probability_Matrix)
-
-        # --------------------
-        # AGENT
-        print('SETTING UP AGENT')
-        agent = VRPAgent(env=environment,
-                         policy_manager=policyManager,
-                         num_episodes=num_episodes,
-                         max_steps=max_steps,
-                         discount_factor=discount_factor
-                         )
-
-        # --------------------
-        # TRAINING RESULTS
-        print('STARTING TRAINING')
-        training_start = timer()
-        episodeStatistics, policy_action_space, best_policy_reward, worst_policy_reward, last_policy_reward = agent.train_model()
-        training_end = timer()
-        current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
-                                                                            environment, max_steps)
-
-        print("----------------------------------------")
-        print("Best_policy_reward: ", best_policy_reward)
-        print("Worst_policy_reward: ", worst_policy_reward)
-        print("Final_policy_reward: ", last_policy_reward)
-        print("ACO RUN TIME in s: ", (aco_end - aco_start))
-        print("TRAINING RUN TIME in s: ", (training_end - training_start))
-        # --------------------
-        # PLOTTING TRAINING RESULTS
-        plot_episode_stats(episodeStatistics, smoothing_window=25)
-        plot_tour_with_stopnr_as_label(final_tours)
-        current_baseline = policyManager.get_current_baseline_as_dict()
-        plot_baseline_estimate(current_baseline)
-
-        # --------------------
-        # SAVING TRAINING RESULTS
-        """
-         Abbreviation explanation:
-         w = weight
-         v = volume
-         s = shipper
-         c = carrier
-         d = delivery date
-         a = agent
-        """
-        policyManager.saveModel(model_name)
-
     if args['test']:
         # --------------------TESTING MODE--------------------
         print("-Entered Testing Mode-")
@@ -368,10 +244,9 @@ def start_server(args):
     distance_matrix = tManager.get_distances()
 
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, origins="http://localhost:3000", resources={r"/*": {"origins": "http://localhost:3000", "allow_headers": "*", "expose_headers": "*"}})
     app.secret_key = 'asdf'
     red = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
-    api = Api(app)
 
     @app.route('/', methods=['GET'])
     def home():
@@ -386,63 +261,32 @@ def start_server(args):
         global parameter_groups
         content = request.json
         parameter_groups = content
+        tManager.clear()
+        load_stop_data(parameter_groups['groups'][0]['data_input'])
+        return {'POST': "successful"}, 200
 
-        return content
+    @app.route('/images/render/plt-coords', methods=['GET'])
+    def images_render_plt_coords():
+        plt1 = plot_coordinates_with_coordinates_as_label()
+        img1 = BytesIO()
+        plt1.savefig(img1, format='png', bbox_inches='tight')
+        img1.seek(0)
+        plot1_url = base64.b64encode(img1.getvalue()).decode()
+        plt1.close()
 
-    @app.route('/parameters', methods=['POST'])
-    def parameters_update():
-        parser = reqparse.RequestParser()
-        parser.add_argument('data_input', required=True)
-        parser.add_argument('microhub_name', required=True)
-        parser.add_argument('shipper_name', required=True)
-        parser.add_argument('carrier_name', required=True)
-        parser.add_argument('delivery_date', required=True)
-        parser.add_argument('amount_vehicles', required=True)
-        parser.add_argument('vehicle_speed', required=True)
-        parser.add_argument('capacity_weight', required=True)
-        parser.add_argument('capacity_volume', required=True)
+        plt2 = plot_coordinates_with_stopnr__as_label()
+        img2 = BytesIO()
+        plt2.savefig(img2, format='png', bbox_inches='tight')
+        img2.seek(0)
+        plot2_url = base64.b64encode(img2.getvalue()).decode()
+        plt2.close()
 
-        args = parser.parse_args()
+        return_dict = {
+            "plot1_coords": plot1_url,
+            "plot2_stopnr": plot2_url
+        }
 
-        global data_input
-        global microhub_name
-        global shipper_name
-        global carrier_name
-        global delivery_date
-        global amount_vehicles
-        global vehicle_speed
-        global capacity_weight
-        global capacity_volume
-
-        data_input = args['data_input']
-        microhub_name = args['microhub_name']
-        shipper_name = args['shipper_name']
-        carrier_name = args['carrier_name']
-        delivery_date = args['delivery_date']
-        amount_vehicles = args['amount_vehicles']
-        vehicle_speed = args['vehicle_speed']
-        capacity_weight = args['capacity_weight']
-        capacity_volume = args['capacity_volume']
-
-        return {'POST': "succesful"}, 200
-
-    @app.route('/images/render/plt-coord-with-coord', methods=['GET'])
-    def images_render_plt_coord_with_coord():
-        plt = plot_coordinates_with_coordinates_as_label()
-        img = BytesIO()
-        plt.savefig(img, format='png')
-        img.seek(0)
-        plot_url = base64.b64encode(img.getvalue()).decode()
-        return '<img src="data:image/png;base64,{}">'.format(plot_url)
-
-    @app.route('/images/render/plt-coord-with-stop-nr', methods=['GET'])
-    def images_render_plt_coord_with_stop_nr():
-        plt = plot_coordinates_with_stopnr__as_label()
-        img = BytesIO()
-        plt.savefig(img, format='png')
-        img.seek(0)
-        plot_url = base64.b64encode(img.getvalue()).decode()
-        return '<img src="data:image/png;base64,{}">'.format(plot_url)
+        return return_dict
 
     @app.route('/ml-service/training/stream', methods=['GET'])
     def ml_service_training_stream():
@@ -465,7 +309,7 @@ def start_server(args):
     def ml_service_training_start():
         # --------------------TRAINING MODE--------------------
         print("-Entered Training Mode-")
-
+        global parameter_groups
         # --------------------
         # ANT COLONY OPTIMIZATION
         # setting up and running ACO

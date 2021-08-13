@@ -7,6 +7,7 @@ import src.Tour.TourManager as tManager
 
 plt.rcParams['legend.handlelength'] = 1
 plt.rcParams['legend.handleheight'] = 1.125
+plt.rcParams['figure.figsize'] = 7, 7
 
 
 def plt_color(stop_id):
