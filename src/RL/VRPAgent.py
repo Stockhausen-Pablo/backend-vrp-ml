@@ -61,13 +61,14 @@ class VRPAgent:
             episode_policy_reward=np.empty(num_episodes) * np.nan
         )
 
-    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward):
+    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, policy_tours):
         pload = {
             'epoch': epoch,
             'policy_reward': policy_reward,
             'sum_G_t': sum_G_t,
             'best_policy_reward': best_policy_reward,
-            'worst_policy_reward': worst_policy_reward
+            'worst_policy_reward': worst_policy_reward,
+            'policy_tours': policy_tours
         }
         headers = {'Content-type': 'form-data'}
         r = requests.post('http://127.0.0.1:5000/ml-service/training/update', data=pload)
@@ -80,7 +81,7 @@ class VRPAgent:
         """
         for epoch in range(self.num_episodes):
             self.run_episode(epoch)
-            G_t, J_avR, loseHistory, eps, policy_reward = self.policy_manager.policy_update_by_learning(self.env,
+            G_t, J_avR, loseHistory, eps, policy_reward, policy_tours = self.policy_manager.policy_update_by_learning(self.env,
                                                                                                         self.episode,
                                                                                                         self.episode_statistics.episode_rewards[
                                                                                                             epoch],
@@ -100,7 +101,8 @@ class VRPAgent:
                 policy_reward,
                 sum(G_t),
                 min(self.episode_statistics.episode_policy_reward),
-                max(self.episode_statistics.episode_policy_reward)
+                max(self.episode_statistics.episode_policy_reward),
+                policy_tours
             )
             self.env.reset()
 

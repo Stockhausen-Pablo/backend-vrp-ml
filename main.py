@@ -38,7 +38,7 @@ redis_port = 6379
 redis_password = ""
 
 
-def event_stream_vrp_agent(red):
+def event_stream_vrp_agent_stats(red):
     pubsub = red.pubsub()
     pubsub.subscribe('updates')
     # TODO: handle client disconnection.
@@ -230,7 +230,7 @@ def main(args):
         # --------------------
         # PLOTTING TOUR (UNNECESSARY IN PRODUCTION)
         plot_tour_with_stopnr_as_label(final_tours)
-        plot_tours_individual(final_tours, model_name)
+        plot_tours_individual(final_tours, model_name, True)
 
 
 def start_server(args):
@@ -244,7 +244,7 @@ def start_server(args):
     distance_matrix = tManager.get_distances()
 
     app = Flask(__name__)
-    CORS(app, origins="http://localhost:3000", resources={r"/*": {"origins": "http://localhost:3000", "allow_headers": "*", "expose_headers": "*"}})
+    CORS(app, origins="*", resources={r"/*": {"origins": "*", "allow_headers": "*", "expose_headers": "*"}})
     app.secret_key = 'asdf'
     red = redis.StrictRedis(host=redis_host, port=redis_port, password=redis_password, decode_responses=True)
 
@@ -288,9 +288,9 @@ def start_server(args):
 
         return return_dict
 
-    @app.route('/ml-service/training/stream', methods=['GET'])
+    @app.route('/ml-service/training/stream/stats', methods=['GET'])
     def ml_service_training_stream():
-        return flask.Response(event_stream_vrp_agent(red),
+        return flask.Response(event_stream_vrp_agent_stats(red),
                               mimetype="text/event-stream")
 
     @app.route('/ml-service/training/update', methods=['POST'])
@@ -301,8 +301,16 @@ def start_server(args):
         best_policy_reward = flask.request.form['best_policy_reward']
         worst_policy_reward = flask.request.form['worst_policy_reward']
 
+        policy_tours = flask.request.form['policy_tour']
+        plt1 = plot_tours_individual(policy_tours, "", False)
+        img1 = BytesIO()
+        plt1.savefig(img1, format='png', bbox_inches='tight')
+        img1.seek(0)
+        plot1_url = base64.b64encode(img1.getvalue()).decode()
+        plt1.close()
+
         now = datetime.now().replace(microsecond=0).time()
-        red.publish('updates', u'[%s] %s, %s, %s, %s, %s' % (now, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward))
+        red.publish('updates', u'[%s] %s, %s, %s, %s, %s, %s' % (now, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, plot1_url))
         return flask.Response(status=204)
 
     @app.route('/ml-service/training/start', methods=['GET'])
@@ -438,6 +446,8 @@ def start_server(args):
          a = agent
         """
         policyManager.saveModel(model_name)
+
+        return "{done}"
 
     @app.route('/ml-service/testing', methods=['GET'])
     def ml_service_testing():

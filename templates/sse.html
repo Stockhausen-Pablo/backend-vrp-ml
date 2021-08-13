@@ -2,7 +2,7 @@
     <head>
         <title>Test SSE</title>
         <script>
-            const evtSource = new EventSource("http://127.0.0.1:5000/ml-service/training/stream");
+            const evtSource = new EventSource("http://127.0.0.1:5000/ml-service/training/stream/stats");
             evtSource.onmessage = function(event) {
                 console.log(event);
                 const newElement = document.createElement("li");

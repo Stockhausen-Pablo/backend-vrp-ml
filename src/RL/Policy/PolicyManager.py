@@ -256,7 +256,7 @@ class PolicyManager:
 
         # --------------------
         # RETURN
-        return G_t, J_avR, loseHistory, eps, policy_relevant_reward
+        return G_t, J_avR, loseHistory, eps, policy_relevant_reward, new_tour
 
     def construct_policy(self, policy: object, env: object, max_steps: int) -> object:
         """

@@ -15,7 +15,7 @@
     },
     {
         "title": "Training-Settings",
-        "num_episodes": 115,
+        "num_episodes": 5,
         "max_steps": 10000
     },
     {
@@ -39,7 +39,7 @@
         "aco_beta_factor": 1.2,
         "pheromone_evaporation_coefficient": 0.4,
         "pheromone_constant": 1.0,
-        "aco_iterations": 300,
+        "aco_iterations": 5,
         "aco_increasing_factor": 0.9
     },
     {
