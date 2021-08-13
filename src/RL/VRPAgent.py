@@ -63,7 +63,7 @@ class VRPAgent:
             episode_policy_reward=np.empty(num_episodes) * np.nan
         )
 
-    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, policy_tours):
+    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, policy_tours, policy_reward_improvement, sum_G_t_reward_improvement):
         base64_policy_tour = self.base64_current_tour(policy_tours)
         pload = {
             'epoch': epoch,
@@ -71,7 +71,9 @@ class VRPAgent:
             'sum_G_t': sum_G_t,
             'best_policy_reward': best_policy_reward,
             'worst_policy_reward': worst_policy_reward,
-            'policy_tours_base64': base64_policy_tour
+            'policy_tours_base64': base64_policy_tour,
+            'policy_reward_improvement': policy_reward_improvement,
+            'sum_G_t_reward_improvement': sum_G_t_reward_improvement
         }
         headers = {'Content-type': 'form-data'}
         r = requests.post('http://127.0.0.1:5000/ml-service/training/update', data=pload)
@@ -109,13 +111,30 @@ class VRPAgent:
             self.episode_statistics.episode_policy_reward[epoch] = policy_reward
 
             self.eps = eps
+
+            # 0 = worse, 1= improvement, 2=equal
+            policy_reward_improvement = 1
+            sum_G_t_reward_improvement = 1
+
+            if epoch > 0:
+                if self.episode_statistics.episode_policy_reward[epoch-1] < policy_reward:
+                    policy_reward_improvement = 0
+                if self.episode_statistics.episode_policy_reward[epoch-1] == policy_reward:
+                    policy_reward_improvement = 2
+                if self.episode_statistics.episode_G_t[epoch-1] < sum(G_t):
+                    sum_G_t_reward_improvement = 0
+                if self.episode_statistics.episode_G_t[epoch-1] == sum(G_t):
+                    sum_G_t_reward_improvement = 2
+
             self.update_training_stream(
                 epoch,
                 policy_reward,
                 sum(G_t),
                 min(self.episode_statistics.episode_policy_reward),
                 max(self.episode_statistics.episode_policy_reward),
-                policy_tours
+                policy_tours,
+                policy_reward_improvement,
+                sum_G_t_reward_improvement
             )
             self.env.reset()
 

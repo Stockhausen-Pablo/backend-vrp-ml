@@ -301,6 +301,8 @@ def start_server(args):
         best_policy_reward = flask.request.form['best_policy_reward']
         worst_policy_reward = flask.request.form['worst_policy_reward']
         policy_tours_base64 = flask.request.form['policy_tours_base64']
+        policy_reward_improvement = flask.request.form['policy_reward_improvement']
+        sum_G_t_reward_improvement = flask.request.form['sum_G_t_reward_improvement']
 
         json_string = json.dumps({
             "epoch": epoch,
@@ -308,7 +310,9 @@ def start_server(args):
             "sum_G_t": sum_G_t,
             "best_policy_reward": best_policy_reward,
             "worst_policy_reward": worst_policy_reward,
-            "policy_tours_base64": policy_tours_base64
+            "policy_tours_base64": policy_tours_base64,
+            'policy_reward_improvement': policy_reward_improvement,
+            'sum_G_t_reward_improvement': sum_G_t_reward_improvement
         })
 
         red.publish('updates', json_string)
