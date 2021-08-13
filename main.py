@@ -300,17 +300,18 @@ def start_server(args):
         sum_G_t = flask.request.form['sum_G_t']
         best_policy_reward = flask.request.form['best_policy_reward']
         worst_policy_reward = flask.request.form['worst_policy_reward']
+        policy_tours_base64 = flask.request.form['policy_tours_base64']
 
-        policy_tours = flask.request.form['policy_tour']
-        plt1 = plot_tours_individual(policy_tours, "", False)
-        img1 = BytesIO()
-        plt1.savefig(img1, format='png', bbox_inches='tight')
-        img1.seek(0)
-        plot1_url = base64.b64encode(img1.getvalue()).decode()
-        plt1.close()
+        json_string = json.dumps({
+            "epoch": epoch,
+            "policy_reward": policy_reward,
+            "sum_G_t": sum_G_t,
+            "best_policy_reward": best_policy_reward,
+            "worst_policy_reward": worst_policy_reward,
+            "policy_tours_base64": policy_tours_base64
+        })
 
-        now = datetime.now().replace(microsecond=0).time()
-        red.publish('updates', u'[%s] %s, %s, %s, %s, %s, %s' % (now, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, plot1_url))
+        red.publish('updates', json_string)
         return flask.Response(status=204)
 
     @app.route('/ml-service/training/start', methods=['GET'])
@@ -447,7 +448,7 @@ def start_server(args):
         """
         policyManager.saveModel(model_name)
 
-        return "{done}"
+        return {'POST': "successful"}, 200
 
     @app.route('/ml-service/testing', methods=['GET'])
     def ml_service_testing():

@@ -1,9 +1,11 @@
 import collections
 from collections import namedtuple
-
+import base64
 import requests
 import numpy as np
+from io import BytesIO
 
+from src.Utils.plotter import plot_tours_individual
 
 class VRPAgent:
     """
@@ -62,17 +64,28 @@ class VRPAgent:
         )
 
     def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, policy_tours):
+        base64_policy_tour = self.base64_current_tour(policy_tours)
         pload = {
             'epoch': epoch,
             'policy_reward': policy_reward,
             'sum_G_t': sum_G_t,
             'best_policy_reward': best_policy_reward,
             'worst_policy_reward': worst_policy_reward,
-            'policy_tours': policy_tours
+            'policy_tours_base64': base64_policy_tour
         }
         headers = {'Content-type': 'form-data'}
         r = requests.post('http://127.0.0.1:5000/ml-service/training/update', data=pload)
         print(r.text)
+
+    def base64_current_tour(self, policy_tours):
+        plt1 = plot_tours_individual(policy_tours, "", False)
+        img1 = BytesIO()
+        plt1.savefig(img1, format='png', bbox_inches='tight')
+        img1.seek(0)
+        plot1_url = base64.b64encode(img1.getvalue()).decode()
+        plt1.close()
+        return plot1_url
+
 
     def train_model(self) -> object:
         """
