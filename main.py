@@ -8,7 +8,7 @@ import redis
 import flask
 
 from timeit import default_timer as timer
-from flask import Flask, send_file, make_response, render_template, jsonify
+from flask import Flask, send_file, make_response, render_template, jsonify, request
 from flask_restful import Resource, Api, reqparse
 from flask_cors import CORS
 
@@ -359,12 +359,11 @@ def main(args):
 
 def start_server(args):
     global parameter_groups
-
     # --------------------
     # SETTING UP TOUR MANAGER
     # Load Stop Data
     tManager.clear()
-    load_stop_data(parameter_groups['Main-Settings']['data_input'])
+    load_stop_data(parameter_groups['groups'][0]['data_input'])
     # Setup Distance Matrix for later use
     distance_matrix = tManager.get_distances()
 
@@ -381,6 +380,14 @@ def start_server(args):
     @app.route('/parameters/groups', methods=['GET'])
     def get_parameter_groups():
         return flask.jsonify(parameter_groups)
+
+    @app.route('/parameters/groups/update', methods=['POST'])
+    def update_parameter_groups():
+        global parameter_groups
+        content = request.json
+        parameter_groups = content
+
+        return content
 
     @app.route('/parameters', methods=['POST'])
     def parameters_update():
@@ -466,14 +473,14 @@ def start_server(args):
         antManager = AntManager(
             stops=tManager.get_list_of_stops(),
             start_stop=tManager.get_stop(0),
-            vehicle_weight=parameter_groups['Main-Settings']['capacity_weight'],
-            vehicle_volume=parameter_groups['Main-Settings']['capacity_volume'],
-            vehicleCount=parameter_groups['Main-Settings']['amount_vehicles'],
-            discount_alpha=parameter_groups['ACO-Settings']['aco_alpha_factor'],
-            discount_beta=parameter_groups['ACO-Settings']['aco_beta_factor'],
-            pheromone_evaporation_coefficient=parameter_groups['ACO-Settings']['pheromone_evaporation_coefficient'],
-            pheromone_constant=parameter_groups['ACO-Settings']['pheromone_constant'],
-            iterations=parameter_groups['ACO-Settings']['aco_iterations']
+            vehicle_weight=parameter_groups['groups'][0]['capacity_weight'],
+            vehicle_volume=parameter_groups['groups'][0]['capacity_volume'],
+            vehicleCount=parameter_groups['groups'][0]['amount_vehicles'],
+            discount_alpha=parameter_groups['groups'][4]['aco_alpha_factor'],
+            discount_beta=parameter_groups['groups'][4]['aco_beta_factor'],
+            pheromone_evaporation_coefficient=parameter_groups['groups'][4]['pheromone_evaporation_coefficient'],
+            pheromone_constant=parameter_groups['groups'][4]['pheromone_constant'],
+            iterations=parameter_groups['groups'][4]['aco_iterations']
         )
 
         # --------------------
@@ -503,44 +510,44 @@ def start_server(args):
             distance_matrix=distance_matrix,
             microhub=tManager.get_microhub(),
             capacity_demands=tManager.get_capacity_demands_as_dict(),
-            vehicles=parameter_groups['Main-Settings']['amount_vehicles'],
-            vehicle_weight=parameter_groups['Main-Settings']['capacity_weight'],
-            vehicle_volume=parameter_groups['Main-Settings']['capacity_volume']
+            vehicles=parameter_groups['groups'][0]['amount_vehicles'],
+            vehicle_weight=parameter_groups['groups'][0]['capacity_weight'],
+            vehicle_volume=parameter_groups['groups'][0]['capacity_volume']
         )
 
         # --------------------
         # POLICY NETWORK
         policyManager = PolicyManager(environment.get_all_state_hashes(),
-                                      parameter_groups['ML-Settings']['learning_rate'],
-                                      parameter_groups['ML-Settings']['discount_factor'],
-                                      parameter_groups['ML-Settings']['exploration_factor'],
-                                      parameter_groups['Additional-ML-Settings']['increasing_factor'],
-                                      parameter_groups['Additional-ML-Settings']['increasing_factor_good_episode'],
-                                      parameter_groups['Additional-ML-Settings']['decreasing_factor'],
-                                      parameter_groups['Additional-ML-Settings']['decreasing_factor_good_episode'],
-                                      parameter_groups['ML-Settings']['baseline_theta'],
-                                      parameter_groups['Threshold-Settings']['distance_utilization_threshold'],
-                                      parameter_groups['Threshold-Settings']['capacity_utilization_threshold'],
-                                      parameter_groups['Threshold-Settings']['local_search_threshold'],
-                                      parameter_groups['Threshold-Settings']['policy_reset_threshold']
+                                      parameter_groups['groups'][2]['learning_rate'],
+                                      parameter_groups['groups'][2]['discount_factor'],
+                                      parameter_groups['groups'][2]['exploration_factor'],
+                                      parameter_groups['groups'][3]['increasing_factor'],
+                                      parameter_groups['groups'][3]['increasing_factor_good_episode'],
+                                      parameter_groups['groups'][3]['decreasing_factor'],
+                                      parameter_groups['groups'][3]['decreasing_factor_good_episode'],
+                                      parameter_groups['groups'][2]['baseline_theta'],
+                                      parameter_groups['groups'][5]['distance_utilization_threshold'],
+                                      parameter_groups['groups'][5]['capacity_utilization_threshold'],
+                                      parameter_groups['groups'][5]['local_search_threshold'],
+                                      parameter_groups['groups'][5]['policy_reset_threshold']
                                       )
 
         # --------------------
         # LOAD PREVIOUS ML-MODEL
         print('LOADING MODEL')
-        model_name = create_model_name(parameter_groups['Main-Settings']['microhub_name'],
-                                       parameter_groups['Main-Settings']['capacity_weight'],
-                                       parameter_groups['Main-Settings']['capacity_volume'],
-                                       parameter_groups['Main-Settings']['shipper_name'],
-                                       parameter_groups['Main-Settings']['carrier_name'],
-                                       parameter_groups['Main-Settings']['delivery_date'],
-                                       parameter_groups['ML-Settings']['ml_agent'])
+        model_name = create_model_name(parameter_groups['groups'][0]['microhub_name'],
+                                       parameter_groups['groups'][0]['capacity_weight'],
+                                       parameter_groups['groups'][0]['capacity_volume'],
+                                       parameter_groups['groups'][0]['shipper_name'],
+                                       parameter_groups['groups'][0]['carrier_name'],
+                                       parameter_groups['groups'][0]['delivery_date'],
+                                       parameter_groups['groups'][2]['ml_agent'])
         policyManager.loadModel(model_name)
 
         # --------------------
         # APPLY ACO TO ML-MODEL
         print('APPLYING ACO ON MODEL')
-        policyManager.apply_aco_on_policy(parameter_groups['ACO-Settings']['aco_increasing_factor'],
+        policyManager.apply_aco_on_policy(parameter_groups['groups'][4]['aco_increasing_factor'],
                                           aco_probability_Matrix)
 
         # --------------------
@@ -548,9 +555,9 @@ def start_server(args):
         print('SETTING UP AGENT')
         agent = VRPAgent(env=environment,
                          policy_manager=policyManager,
-                         num_episodes=parameter_groups['Training-Settings']['num_episodes'],
-                         max_steps=parameter_groups['Training-Settings']['max_steps'],
-                         discount_factor=parameter_groups['ML-Settings']['discount_factor']
+                         num_episodes=parameter_groups['groups'][1]['num_episodes'],
+                         max_steps=parameter_groups['groups'][1]['max_steps'],
+                         discount_factor=parameter_groups['groups'][2]['discount_factor']
                          )
 
         # --------------------
@@ -560,7 +567,7 @@ def start_server(args):
         episodeStatistics, policy_action_space, best_policy_reward, worst_policy_reward, last_policy_reward = agent.train_model()
         training_end = timer()
         current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
-                                                                            environment, parameter_groups['Training-Settings']['max_steps'])
+                                                                            environment, parameter_groups['groups'][1]['max_steps'])
 
         print("----------------------------------------")
         print("Best_policy_reward: ", best_policy_reward)

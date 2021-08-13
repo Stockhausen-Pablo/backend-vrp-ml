@@ -1,45 +1,53 @@
 {
-  "Main-Settings": {
-    "data_input": "short_train_data",
-    "microhub_name": "TestHub",
-    "shipper_name": "TestVersender",
-    "carrier_name": "TestCarrier",
-    "delivery_date": "Test",
-    "amount_vehicles": 2,
-    "vehicle_speed": 30,
-    "capacity_weight": 180,
-    "capacity_volume": 500,
-    "stay_duration" : 5
-  },
-  "Training-Settings": {
-    "num_episodes": 115,
-    "max_steps": 10000
-  },
-  "ML-Settings": {
-    "learning_rate": 0.125,
-    "discount_factor": 0.95,
-    "exploration_factor": 0.05,
-    "ml_agent": "policy_gradient_agent",
-    "baseline_theta": 0.00001
-  },
-  "Additional-ML-Settings":{
-    "increasing_factor": 0.95,
-    "increasing_factor_good_episode": 0.9,
-    "decreasing_factor": 1.03,
-    "decreasing_factor_good_episode": 1.06
-  },
-  "ACO-Settings": {
-    "aco_alpha_factor": 0.5,
-    "aco_beta_factor": 1.2,
-    "pheromone_evaporation_coefficient": 0.4,
-    "pheromone_constant": 1.0,
-    "aco_iterations": 300,
-    "aco_increasing_factor": 0.9
-  },
-  "Threshold-Settings":{
-    "distance_utilization_threshold": 0.5,
-    "capacity_utilization_threshold": 0.25,
-    "local_search_threshold": 0.5,
-    "policy_reset_threshold": -1
-  }
+  "groups": [
+    {
+        "title": "Main-Settings",
+        "data_input": "short_train_data",
+        "microhub_name": "TestHub",
+        "shipper_name": "TestVersender",
+        "carrier_name": "TestCarrier",
+        "delivery_date": "Test",
+        "amount_vehicles": 2,
+        "vehicle_speed": 30,
+        "capacity_weight": 180,
+        "capacity_volume": 500,
+        "stay_duration": 5
+    },
+    {
+        "title": "Training-Settings",
+        "num_episodes": 115,
+        "max_steps": 10000
+    },
+    {
+        "title": "ML-Settings",
+        "learning_rate": 0.125,
+        "discount_factor": 0.95,
+        "exploration_factor": 0.05,
+        "ml_agent": "policy_gradient_agent",
+        "baseline_theta": 0.00001
+    },
+    {
+        "title": "Additional-ML-Settings",
+        "increasing_factor": 0.95,
+        "increasing_factor_good_episode": 0.9,
+        "decreasing_factor": 1.03,
+        "decreasing_factor_good_episode": 1.06
+    },
+    {
+        "title": "ACO-Settings",
+        "aco_alpha_factor": 0.5,
+        "aco_beta_factor": 1.2,
+        "pheromone_evaporation_coefficient": 0.4,
+        "pheromone_constant": 1.0,
+        "aco_iterations": 300,
+        "aco_increasing_factor": 0.9
+    },
+    {
+        "title": "Threshold-Settings",
+        "distance_utilization_threshold": 0.5,
+        "capacity_utilization_threshold": 0.25,
+        "local_search_threshold": 0.5,
+        "policy_reset_threshold": -1
+    }
+  ]
 }
