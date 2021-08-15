@@ -22,7 +22,7 @@ from src.RL.Policy.PolicyManager import PolicyManager
 from src.RL.VRPAgent import VRPAgent
 from src.Tour.Stop import Stop
 from src.Utils.helper import calculate_tour_meta
-from src.Utils.memoryLoader import create_model_name
+from src.Utils.memoryLoader import create_model_name, delete_memory_df_from_local
 from src.Utils.plotter import plot_episode_stats, \
     plot_baseline_estimate, \
     plot_coordinates_with_coordinates_as_label, \
@@ -101,6 +101,19 @@ def start_server(args):
         tManager.clear()
         load_stop_data(parameter_groups['groups'][0]['data_input'])
         return {'POST': "successful"}, 200
+
+    @app.route('/model/delete', methods=['DELETE'])
+    def delete_ml_model():
+        global parameter_groups
+        model_name = create_model_name(parameter_groups['groups'][0]['microhub_name'],
+                                       parameter_groups['groups'][0]['capacity_weight'],
+                                       parameter_groups['groups'][0]['capacity_volume'],
+                                       parameter_groups['groups'][0]['shipper_name'],
+                                       parameter_groups['groups'][0]['carrier_name'],
+                                       parameter_groups['groups'][0]['delivery_date'],
+                                       parameter_groups['groups'][2]['ml_agent'])
+        delete_memory_df_from_local('./model/' + model_name + '.pkl')
+        return {'DELETE': "successful"}, 200
 
     @app.route('/images/render/plt-coords', methods=['GET'])
     def images_render_plt_coords():
