@@ -1,4 +1,4 @@
-# vrp-rl
+# vrp-ml
 
 A Python Implementation of REINFORCE with baseline in combination with an ant colony optimization algorithm to solve capacitated vehicle routing problems.
 
