@@ -44,6 +44,14 @@ def save_memory_df_to_local(pickle_name, df_source):
     df_source.to_pickle(pickle_name)
 
 
+def delete_memory_df_from_local(pickle_name):
+    import os
+    if os.path.isfile(pickle_name):
+        os.remove(pickle_name)
+    else:  ## Show an error ##
+        print("Error: %s file not found" % pickle_name)
+
+
 def create_model_name(microhub_name, capacity_weight, capacity_volume, shipper_name, carrier_name, delivery_date, ml_agent):
     return microhub_name + '_w_' + str(capacity_weight) + '_v_' + str(capacity_volume) + '_s_'+ shipper_name + '_c_' + carrier_name + '_d_' + delivery_date + '_a_' + str(ml_agent)
 

@@ -42,8 +42,8 @@ def calculate_distance(startStop, endStop):
         lat2)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     distance = R * c
-    distance_approximation = distance * np.sqrt(2)
-    return distance_approximation
+    # distance_approximation = distance * np.sqrt(2)
+    return distance
 
 
 def normalize_list(probList):

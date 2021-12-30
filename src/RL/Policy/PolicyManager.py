@@ -256,7 +256,7 @@ class PolicyManager:
 
         # --------------------
         # RETURN
-        return G_t, J_avR, loseHistory, eps, policy_relevant_reward
+        return G_t, J_avR, loseHistory, eps, policy_relevant_reward, new_tour
 
     def construct_policy(self, policy: object, env: object, max_steps: int) -> object:
         """
@@ -502,6 +502,13 @@ class PolicyManager:
         """
         :return: current policy
         """
+        return self.policy_action_space
+
+    def set_current_policy(self, policy) -> object:
+        """
+        :return: current policy
+        """
+        self.policy_action_space = policy
         return self.policy_action_space
 
     def get_current_baseline_as_dict(self) -> object:

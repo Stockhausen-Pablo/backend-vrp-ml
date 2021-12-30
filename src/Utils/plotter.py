@@ -7,6 +7,7 @@ import src.Tour.TourManager as tManager
 
 plt.rcParams['legend.handlelength'] = 1
 plt.rcParams['legend.handleheight'] = 1.125
+plt.rcParams['figure.figsize'] = 6, 6
 
 
 def plt_color(stop_id):
@@ -31,7 +32,8 @@ def plot_coordinates_with_coordinates_as_label():
 
     for i_x, i_y in zip(x, y):
         plt.text(i_x, i_y, '({}, {})'.format(i_x, i_y))
-    plt.show()
+
+    return plt
 
 
 def plot_coordinates_with_stopnr__as_label():
@@ -54,7 +56,7 @@ def plot_coordinates_with_stopnr__as_label():
                  fontsize=24)
         stop_nr += 1
 
-    plt.show()
+    return plt
 
 
 def plot_tour_with_stopnr_as_label(tours):
@@ -104,7 +106,7 @@ def plot_tour_with_stopnr_as_label(tours):
     plt.show()
 
 
-def plot_tours_individual(tours, model_name):
+def plot_tours_individual(tours, model_name, save):
     """
     Plots constructed tour with stop number as the scatter-point labels.
     """
@@ -148,8 +150,11 @@ def plot_tours_individual(tours, model_name):
                      verticalalignment='bottom',
                      fontsize=18)
             tour_stop_nr += 1
-    plt.savefig('./results/' + model_name + '.png')
-    plt.show()
+
+    if save:
+        plt.savefig('./results/' + model_name + '.png')
+
+    return plt
 
 
 def plot_baseline_estimate(V, title="Baseline Estimate"):
