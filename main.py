@@ -1,20 +1,15 @@
 import base64
 import csv
 import json
-from datetime import datetime
 from io import BytesIO
+from timeit import default_timer as timer
 
-from flask_restful.utils.cors import crossdomain
+import flask
+import redis
+from flask import Flask, request
+from flask_cors import CORS
 
 import src.Tour.TourManager as tManager
-import redis
-import flask
-
-from timeit import default_timer as timer
-from flask import Flask, send_file, make_response, render_template, jsonify, request
-from flask_restful import Resource, Api, reqparse
-from flask_cors import CORS, cross_origin
-
 from argsConfig import getParams
 from src.Aco.AntManager import AntManager
 from src.Mdp.VRPEnvironment import VRPEnvironment
@@ -44,7 +39,7 @@ def event_stream_vrp_agent_stats(red):
     # TODO: handle client disconnection.
     for message in pubsub.listen():
         print(message)
-        if message['type']=='message':
+        if message['type'] == 'message':
             yield 'data: %s\n\n' % message['data']
 
 
@@ -64,10 +59,10 @@ def load_global_parameters():
     global parameter_groups
 
     with open("parameter_groups.json") as jsonFile:
-        jsonObject = json.load(jsonFile)
+        json_object = json.load(jsonFile)
         jsonFile.close()
 
-    parameter_groups = jsonObject
+    parameter_groups = json_object
 
 
 def start_server(args):
@@ -202,6 +197,9 @@ def start_server(args):
         ant_shortest_distance = resultACO[0]
         ant_shortest_path = resultACO[1]
         aco_probability_Matrix = resultACO[2]
+        aco_total_time, aco_total_distance, aco_average_time_per_tour, aco_average_distance_per_tour = calculate_tour_meta(
+            parameter_groups['groups'][0]['vehicle_speed'], parameter_groups['groups'][0]['stay_duration'],
+            ant_shortest_path)
 
         # --------------------
         # ENVIRONMENT
@@ -271,10 +269,17 @@ def start_server(args):
         # TRAINING RESULTS
         print('STARTING TRAINING')
         training_start = timer()
-        episodeStatistics, policy_action_space, best_policy_reward, worst_policy_reward, last_policy_reward = agent.train_model()
+        episode_statistics, policy_action_space, best_policy_reward, worst_policy_reward, last_policy_reward, best_policy_reward_index = agent.train_model()
         training_end = timer()
-        current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
-                                                                            environment, parameter_groups['groups'][1]['max_steps'])
+
+        if last_policy_reward <= best_policy_reward:
+            current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
+                                                                                environment,
+                                                                                parameter_groups['groups'][1][
+                                                                                    'max_steps'])
+        else:
+            policyManager.set_current_policy(episode_statistics.episode_policy[best_policy_reward_index])
+            final_tours = episode_statistics.episode_tours[best_policy_reward_index]
 
         print("----------------------------------------")
         print("Best_policy_reward: ", best_policy_reward)
@@ -284,7 +289,7 @@ def start_server(args):
         print("TRAINING RUN TIME in s: ", (training_end - training_start))
         # --------------------
         # PLOTTING TRAINING RESULTS
-        plot_episode_stats(episodeStatistics, smoothing_window=25)
+        plot_episode_stats(episode_statistics, smoothing_window=25)
         plot_tour_with_stopnr_as_label(final_tours)
         current_baseline = policyManager.get_current_baseline_as_dict()
         plot_baseline_estimate(current_baseline)
@@ -355,7 +360,8 @@ def start_server(args):
         # --------------------
         # CONSTRUCTION SOLUTION
         current_policy_reward, final_tours = policyManager.construct_policy(policyManager.get_current_policy(),
-                                                                            environment, parameter_groups['groups'][1]['max_steps'])
+                                                                            environment,
+                                                                            parameter_groups['groups'][1]['max_steps'])
         testing_end = timer()
 
         for tour in final_tours:
@@ -445,5 +451,5 @@ def start_server(args):
 if __name__ == "__main__":
     args = getParams()
     load_global_parameters()
-    #main(args)
+    # main(args)
     start_server(args)

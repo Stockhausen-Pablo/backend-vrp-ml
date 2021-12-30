@@ -504,6 +504,13 @@ class PolicyManager:
         """
         return self.policy_action_space
 
+    def set_current_policy(self, policy) -> object:
+        """
+        :return: current policy
+        """
+        self.policy_action_space = policy
+        return self.policy_action_space
+
     def get_current_baseline_as_dict(self) -> object:
         """
         :return: baseline estimate as dict

@@ -7,6 +7,7 @@ from io import BytesIO
 
 from src.Utils.plotter import plot_tours_individual
 
+
 class VRPAgent:
     """
     REINFORCE (Monte Carlo Policy Gradient) Agent.
@@ -15,7 +16,7 @@ class VRPAgent:
     """
 
     EpisodeStats = namedtuple("Stats",
-                              ["episode_lengths", "episode_rewards", "episode_tours", "episode_G_t", "episode_J_avR",
+                              ["episode_lengths", "episode_rewards", "episode_tours", "episode_policy", "episode_G_t", "episode_J_avR",
                                "episode_policy_reward"])
 
     def __init__(self,
@@ -58,12 +59,14 @@ class VRPAgent:
             episode_lengths=np.zeros(num_episodes),
             episode_rewards=np.empty(num_episodes) * np.nan,
             episode_tours=[[] for i in range(num_episodes)],
+            episode_policy=[[] for i in range(num_episodes)],
             episode_G_t=np.zeros(num_episodes),
             episode_J_avR=np.zeros(num_episodes),
             episode_policy_reward=np.empty(num_episodes) * np.nan
         )
 
-    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward, policy_tours, policy_reward_improvement, sum_G_t_reward_improvement):
+    def update_training_stream(self, epoch, policy_reward, sum_G_t, best_policy_reward, worst_policy_reward,
+                               policy_tours, policy_reward_improvement, sum_G_t_reward_improvement):
         base64_policy_tour = self.base64_current_tour(policy_tours)
         pload = {
             'epoch': epoch,
@@ -88,7 +91,6 @@ class VRPAgent:
         plt1.close()
         return plot1_url
 
-
     def train_model(self) -> object:
         """
         START TRAINING THE ML-MODEL
@@ -96,14 +98,15 @@ class VRPAgent:
         """
         for epoch in range(self.num_episodes):
             self.run_episode(epoch)
-            G_t, J_avR, loseHistory, eps, policy_reward, policy_tours = self.policy_manager.policy_update_by_learning(self.env,
-                                                                                                        self.episode,
-                                                                                                        self.episode_statistics.episode_rewards[
-                                                                                                            epoch],
-                                                                                                        self.gamma,
-                                                                                                        self.max_steps,
-                                                                                                        self.num_episodes,
-                                                                                                        epoch)
+            G_t, J_avR, loseHistory, eps, policy_reward, policy_tours = self.policy_manager.policy_update_by_learning(
+                self.env,
+                self.episode,
+                self.episode_statistics.episode_rewards[
+                    epoch],
+                self.gamma,
+                self.max_steps,
+                self.num_episodes,
+                epoch)
 
             # Update Meta information
             self.episode_statistics.episode_G_t[epoch] = sum(G_t)
@@ -117,13 +120,13 @@ class VRPAgent:
             sum_G_t_reward_improvement = 1
 
             if epoch > 0:
-                if self.episode_statistics.episode_policy_reward[epoch-1] < policy_reward:
+                if self.episode_statistics.episode_policy_reward[epoch - 1] < policy_reward:
                     policy_reward_improvement = 0
-                if self.episode_statistics.episode_policy_reward[epoch-1] == policy_reward:
+                if self.episode_statistics.episode_policy_reward[epoch - 1] == policy_reward:
                     policy_reward_improvement = 2
-                if self.episode_statistics.episode_G_t[epoch-1] < sum(G_t):
+                if self.episode_statistics.episode_G_t[epoch - 1] < sum(G_t):
                     sum_G_t_reward_improvement = 0
-                if self.episode_statistics.episode_G_t[epoch-1] == sum(G_t):
+                if self.episode_statistics.episode_G_t[epoch - 1] == sum(G_t):
                     sum_G_t_reward_improvement = 2
 
             self.update_training_stream(
@@ -139,6 +142,7 @@ class VRPAgent:
             self.env.reset()
 
         best_policy_reward = min(self.episode_statistics.episode_policy_reward)
+        best_policy_reward_index = list(self.episode_statistics.episode_policy_reward).index(best_policy_reward)
         worst_policy_reward = max(self.episode_statistics.episode_policy_reward)
         last_policy_reward = self.episode_statistics.episode_policy_reward[
             len(self.episode_statistics.episode_policy_reward) - 1]
@@ -147,7 +151,8 @@ class VRPAgent:
                self.policy_manager.policy_action_space, \
                best_policy_reward, \
                worst_policy_reward, \
-               last_policy_reward
+               last_policy_reward, \
+               best_policy_reward_index
 
     def update(self, state: object, action: object, action_space_prob: object, reward: float, next_state: object,
                done: bool, possible_next_states: object,
@@ -249,6 +254,7 @@ class VRPAgent:
             self.episode_statistics.episode_rewards[epoch] += reward
             self.episode_statistics.episode_lengths[epoch] = step_t
             self.episode_statistics.episode_tours[epoch] = current_tours
+            self.episode_statistics.episode_policy[epoch] = self.policy_manager.get_current_policy()
 
             # --------------------
             # PRINT EPOCH PROGRESS

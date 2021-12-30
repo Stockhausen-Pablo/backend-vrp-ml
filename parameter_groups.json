@@ -2,20 +2,20 @@
   "groups": [
     {
         "title": "Main-Settings",
-        "data_input": "short_train_data",
-        "microhub_name": "TestHub",
-        "shipper_name": "TestVersender",
-        "carrier_name": "TestCarrier",
-        "delivery_date": "Test",
+        "data_input": "brodowin_2021_05_19_TourStop",
+        "microhub_name": "Adenauerplatz",
+        "shipper_name": "Brodowin",
+        "carrier_name": "UrbanCargo",
+        "delivery_date": "Wed",
         "amount_vehicles": 2,
         "vehicle_speed": 30,
-        "capacity_weight": 180,
-        "capacity_volume": 500,
+        "capacity_weight": 250,
+        "capacity_volume": 700,
         "stay_duration": 5
     },
     {
         "title": "Training-Settings",
-        "num_episodes": 5,
+        "num_episodes": 115,
         "max_steps": 10000
     },
     {
@@ -39,15 +39,15 @@
         "aco_beta_factor": 1.2,
         "pheromone_evaporation_coefficient": 0.4,
         "pheromone_constant": 1.0,
-        "aco_iterations": 5,
-        "aco_increasing_factor": 0.9
+        "aco_iterations": 150,
+        "aco_increasing_factor": 0.86
     },
     {
         "title": "Threshold-Settings",
-        "distance_utilization_threshold": 0.5,
-        "capacity_utilization_threshold": 0.25,
-        "local_search_threshold": 0.5,
-        "policy_reset_threshold": -1
+        "distance_utilization_threshold": 0.4,
+        "capacity_utilization_threshold": 0.35,
+        "local_search_threshold": 0.4,
+        "policy_reset_threshold": -4
     }
   ]
 }
