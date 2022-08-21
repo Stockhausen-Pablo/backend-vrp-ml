@@ -6,3 +6,7 @@ redis~=3.5.3
 Flask-Cors~=3.0.10
 requests~=2.26.0
 flask~=2.0.1
+sqlalchemy~=1.4.29
+tensorflow~=2.9.1
+pip~=22.1.2
+tf-agents~=0.13.0
