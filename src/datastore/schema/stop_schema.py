@@ -7,7 +7,6 @@ ma = ml_api_controller.ma
 class StopSchema(ma.Schema):
     class Meta:
         fields = ("id",
-                  "stopNr",
                   "location",
                   "demandWeight",
                   "demandVolume",

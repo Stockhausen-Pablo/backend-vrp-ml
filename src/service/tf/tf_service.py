@@ -16,3 +16,12 @@ class TensorflowTrainingService:
         utils.validate_py_environment(env, episodes=5)
         test = 0
         tf_env = tf_agents.environments.tf_py_environment.TFPyEnvironment(env)
+
+    def activate_agent(self):
+        # DQN
+        # REINFORCE
+        # DDPG
+        # TD3
+        # PPO
+        # SAC
+        pass

@@ -6,7 +6,6 @@ db = ml_api_controller.db
 
 class Stop(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    stopNr = db.Column(db.String(50))
     location = db.Column(Point, nullable=False)
     demandWeight = db.Column(db.Float(10), nullable=False)
     demandVolume = db.Column(db.Float(10), nullable=False)

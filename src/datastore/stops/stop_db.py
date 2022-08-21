@@ -12,8 +12,13 @@ class StopDataStore:
         return stop_schema.dump(stop)
 
     def get_stops_by_training_request(self, training_meta_data, stop_ids):
-        stops = Stop.query.filter(Stop.id.in_(stop_ids),
-                                  Stop.shipper.like(training_meta_data.get('shipper')),
-                                  Stop.carrier.like(training_meta_data.get('carrier')),
-                                  Stop.microhub.like(training_meta_data.get('microhub'))).all()
+        if not stop_ids:
+            stops = Stop.query.filter(Stop.shipper.like(training_meta_data.get('shipper')),
+                                      Stop.carrier.like(training_meta_data.get('carrier')),
+                                      Stop.microhub.like(training_meta_data.get('microhub'))).all()
+        else:
+            stops = Stop.query.filter(Stop.id.in_(stop_ids),
+                                      Stop.shipper.like(training_meta_data.get('shipper')),
+                                      Stop.carrier.like(training_meta_data.get('carrier')),
+                                      Stop.microhub.like(training_meta_data.get('microhub'))).all()
         return stops_schema.dump(stops)
